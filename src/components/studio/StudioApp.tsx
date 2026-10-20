@@ -200,7 +200,15 @@ function MeshEditPanel({
     }
   }, []);
   useEffect(() => {
+    // Atualiza o estado da ponte quando ela inicia depois do Studio.
     void checkBridge();
+    const refresh = () => { void checkBridge(); };
+    window.addEventListener("focus", refresh);
+    const timer = window.setInterval(refresh, 10000);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.clearInterval(timer);
+    };
   }, [checkBridge]);
   const current = geometryDimensions(geometry);
   const box = geometry.boundingBox;
