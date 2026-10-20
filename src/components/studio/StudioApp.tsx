@@ -898,7 +898,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
         </section>
         {page === "studio" && (
           <>
-            <div className={`workspace ${imported ? "mesh-workspace" : ""}`} ref={workspaceRef}>
+            <div className={`workspace editor-expanded ${imported ? "mesh-workspace" : ""}`} ref={workspaceRef}>
               <aside className="library-panel">
                 <div className="panel-heading">
                   <span>Biblioteca de formas</span>
