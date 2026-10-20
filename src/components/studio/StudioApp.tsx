@@ -200,7 +200,15 @@ function MeshEditPanel({
     }
   }, []);
   useEffect(() => {
+    // Atualiza o estado da ponte quando ela inicia depois do Studio.
     void checkBridge();
+    const refresh = () => { void checkBridge(); };
+    window.addEventListener("focus", refresh);
+    const timer = window.setInterval(refresh, 10000);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.clearInterval(timer);
+    };
   }, [checkBridge]);
   const current = geometryDimensions(geometry);
   const box = geometry.boundingBox;
@@ -890,7 +898,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
         </section>
         {page === "studio" && (
           <>
-            <div className={`workspace ${imported ? "mesh-workspace" : ""}`} ref={workspaceRef}>
+            <div className={`workspace editor-expanded ${imported ? "mesh-workspace" : ""}`} ref={workspaceRef}>
               <aside className="library-panel">
                 <div className="panel-heading">
                   <span>Biblioteca de formas</span>
@@ -972,6 +980,31 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                       <Maximize />
                     </Button>
                   </div>
+                </div>
+                <div className="editor-quicktools" role="toolbar" aria-label="Ferramentas rápidas de edição 3D">
+                  <Button size="sm" variant="outline" title="Importar STL" onClick={() => importStlRef.current?.click()}>
+                    <Upload size={15} /> <span>Importar</span>
+                  </Button>
+                  {imported && (
+                    <Button size="sm" variant="outline" title="Desfazer edição" disabled={!undoGeometry || busy} onClick={undoMesh}>
+                      <Undo2 size={15} /> <span>Desfazer</span>
+                    </Button>
+                  )}
+                  <Button size="sm" variant={wireframe ? "default" : "outline"} title="Alternar visualização de malha" aria-pressed={wireframe} onClick={() => setWireframe((v) => !v)}>
+                    <Layers size={15} /> <span>Malha</span>
+                  </Button>
+                  <Button size="sm" variant="outline" title="Vista 3D" onClick={() => setView("3d")}>
+                    <Box size={15} /> <span>3D</span>
+                  </Button>
+                  <Button size="sm" variant="outline" title="Vista superior" onClick={() => setView("2d")}>
+                    <Monitor size={15} /> <span>Topo</span>
+                  </Button>
+                  <Button size="sm" variant="outline" title="Enquadrar objeto" onClick={() => { setReset((v) => v + 1); setZoom(100); }}>
+                    <RotateCcw size={15} /> <span>Enquadrar</span>
+                  </Button>
+                  <Button size="sm" variant="outline" title="Exportar modelo" onClick={() => setDialog("export")}>
+                    <Download size={15} /> <span>Exportar</span>
+                  </Button>
                 </div>
                 <div className="model-badge">
                   <span className="status-dot" />

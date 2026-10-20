@@ -3401,3 +3401,65 @@ textarea:focus-visible {
     font-size: 9px;
   }
 }
+
+
+/* Editor 3D: área ampla e ferramentas sempre dentro do visor */
+.workspace.editor-expanded {
+  margin: 0 14px;
+  height: calc(100vh - 172px);
+  min-height: 690px;
+  max-height: none;
+  grid-template-columns: 195px minmax(0, 1fr) 292px;
+}
+.workspace.editor-expanded.mesh-workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 350px);
+}
+.editor-quicktools {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: 54px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 7px;
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-panel);
+}
+.editor-quicktools button {
+  min-height: 32px;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.workspace.editor-expanded:fullscreen {
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+}
+@media (max-width: 1080px) {
+  .workspace.editor-expanded:not(:fullscreen) {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+  .workspace.editor-expanded:not(:fullscreen) .library-panel { display: none; }
+}
+@media (max-width: 800px) {
+  .workspace.editor-expanded:not(:fullscreen) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: auto;
+    margin: 0 12px;
+  }
+  .workspace.editor-expanded:not(:fullscreen) .viewport { min-height: 65vh; }
+  .editor-quicktools { width: calc(100% - 20px); }
+  .editor-quicktools button { padding-inline: 8px; }
+}
