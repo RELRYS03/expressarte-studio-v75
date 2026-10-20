@@ -898,7 +898,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
         </section>
         {page === "studio" && (
           <>
-            <div className={`workspace editor-expanded ${imported ? "mesh-workspace" : ""}`} ref={workspaceRef}>
+            <div className={`workspace editor-expanded blender-ui ${imported ? "mesh-workspace" : ""}`} ref={workspaceRef}>
               <aside className="library-panel">
                 <div className="panel-heading">
                   <span>Biblioteca de formas</span>
@@ -911,6 +911,19 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                 </div>
               </aside>
               <section className="viewport" aria-label="Área de modelagem">
+                <div className="blender-viewport-header">
+                  <span><Box size={13} /> Modo Objeto</span>
+                  <span>Visualizar</span><span>Selecionar</span><span>Adicionar</span><span>Objeto</span>
+                  <strong>{imported ? "STL importado" : "Modelagem 3D"}</strong>
+                </div>
+                <div className="blender-tool-rail" role="toolbar" aria-label="Ferramentas da viewport">
+                  <Button variant="ghost" size="icon" title="Importar STL" onClick={() => importStlRef.current?.click()}><Upload size={19}/></Button>
+                  <Button variant="ghost" size="icon" title="Mostrar malha" onClick={() => setWireframe(v => !v)}><Layers size={19}/></Button>
+                  <Button variant="ghost" size="icon" title="Vista superior" onClick={() => setView("2d")}><Monitor size={19}/></Button>
+                  <Button variant="ghost" size="icon" title="Vista perspectiva" onClick={() => setView("3d")}><Box size={19}/></Button>
+                  <Button variant="ghost" size="icon" title="Centralizar vista" onClick={() => { setReset(v => v + 1); setZoom(100); }}><Maximize size={19}/></Button>
+                  {imported && <Button variant="ghost" size="icon" title="Desfazer" disabled={!undoGeometry || busy} onClick={undoMesh}><Undo2 size={19}/></Button>}
+                </div>
                 <ClientOnly fallback={<div className="empty-view">Carregando modelo…</div>}>
                   <Suspense fallback={<div className="empty-view">Carregando modelo…</div>}>
                     <ModelScene
@@ -1044,6 +1057,11 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                 </div>
               </section>
               <aside className="properties-panel">
+                <div className="blender-outliner">
+                  <div className="blender-pane-title"><Layers size={13}/> Coleção da cena</div>
+                  <div className="blender-collection-item"><ChevronRight size={12}/><Layers size={13}/> Collection</div>
+                  <div className="blender-object-item"><Box size={13}/> {imported ? imported.name : config.name || "Modelo 3D"}</div>
+                </div>
                 <div className="panel-heading">
                   <span>{imported ? "Editar malha STL" : "Personalizar modelo"}</span>
                   {imported ? (
