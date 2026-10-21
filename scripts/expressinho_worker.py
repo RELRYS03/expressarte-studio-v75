@@ -49,15 +49,24 @@ def create(payload, output_stl, output_blend):
     outline=build_outline(shape,width)
     base=plate("01_Base_editavel",outline,depth)
     base["expressinho_tipo"]="base"
-    highest=max(y for x,y in outline)
-    # Sobreposicao fisica na parte superior para garantir contato com a base.
+    # O topo no centro do coracao e mais baixo que os dois ombros.
+    # Encostar na altura maxima do coracao deixava a argola flutuando.
+    center_top=max(y for x,y in outline if abs(x)<=width*.02)
     outer=width*.11
     minor=max(2.0,width*.024)
+    ring_y=center_top+outer-1.5
     bpy.ops.mesh.primitive_torus_add(major_radius=outer-minor,minor_radius=minor,
-        major_segments=64,minor_segments=16,location=(0,highest+outer*.45,depth/2))
+        major_segments=64,minor_segments=16,location=(0,ring_y,depth/2))
     loop=bpy.context.object
     loop.name="02_Argola_editavel"
     loop["expressinho_tipo"]="argola"
+    # Haste curta atravessa a base e encontra a argola sem tampar o furo.
+    bpy.ops.mesh.primitive_cube_add(size=1,location=(0,center_top-1.5,depth/2))
+    neck=bpy.context.object
+    neck.name="02B_Conector_editavel"
+    neck.dimensions=(minor*2.3,5,depth)
+    bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
+    neck["expressinho_tipo"]="conector"
     # Texto permanece objeto de texto Blender, editavel no .blend.
     if name:
         curve=bpy.data.curves.new("Nome_editavel","FONT")
