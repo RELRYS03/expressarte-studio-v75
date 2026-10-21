@@ -94,3 +94,30 @@ Referências:
 https://developers.tripo3d.ai/en/docs/generation-text-to-model/standard
 https://developers.tripo3d.ai/en/docs/task-query
 https://developers.tripo3d.ai/en/docs/account
+
+
+## Diagnóstico pelo Python (Blender / PowerShell)
+
+O arquivo `scripts/tripo_task_monitor.py` foi criado para substituir os
+trechos de Python incompletos e corrigir o objeto `data` da API oficial.
+Ele **não precisa de requests nem axios**: usa apenas a biblioteca padrão
+do Python 3. Execute pelo **PowerShell**, não cole na aba Text Editor do
+Blender, pois monitorar a API na interface travaria o Blender.
+
+1. Consulte saldo com `node .\\scripts\\tripo_diagnose.mjs`.
+2. Consulte uma tarefa existente, gratuitamente:
+
+```powershell
+py -3 .\\scripts\\tripo_task_monitor.py --task-id task_ID_DA_SUA_TAREFA
+```
+
+3. Somente se tiver uma nova chave, saldo de API **e quiser mesmo usar créditos**,
+   o comando abaixo inicia **uma** tarefa e acompanha seu progresso:
+
+```powershell
+py -3 .\\scripts\\tripo_task_monitor.py --generate --confirm-credits --prompt "Dragão azul celestial estilizado, corpo inteiro e asas próximas do corpo"
+```
+
+O arquivo devolve o link temporário do GLB para baixar. Abra o GLB no Blender,
+ou use o botão **Abrir GLB** no editor Express'Arte.
+Não inclui tokens ou credenciais no código versionado.
