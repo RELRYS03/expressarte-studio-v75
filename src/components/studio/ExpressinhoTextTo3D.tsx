@@ -186,7 +186,7 @@ export default function ExpressinhoTextTo3D() {
         <label className="expressinho-consent">
           <input type="checkbox" checked={confirmCredits} onChange={e => setConfirmCredits(e.target.checked)}
             disabled={!status?.available || phase==="creating" || phase==="running"}/>
-          <span>Autorizo a criação de **uma tarefa** no Tripo API, que pode consumir créditos. O valor exato depende do serviço.</span>
+          <span>Autorizo a criação de uma tarefa no Tripo API, que pode consumir créditos. O valor exato depende do serviço.</span>
         </label>
       </> : <div className="expressinho-engine-detail">
         <strong>Blender local · Não gasta créditos</strong>
@@ -221,3 +221,4 @@ export default function ExpressinhoTextTo3D() {
       </div>}
     </div>
   </section>;
+}
