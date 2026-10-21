@@ -280,6 +280,9 @@ export default function ImageTo3DApp() {
       setMessage("Escolha uma imagem antes de gerar o modelo com IA.");
       return;
     }
+    if (!window.confirm("Enviar imagem ao Tripo API para gerar modelo 3D? Esta tarefa pode consumir créditos da API, que são diferentes dos créditos Tripo Studio. Deseja continuar?")) {
+      return;
+    }
     setTripoState("uploading");
     setTripoProgress(0);
     setTripoResult(null);
