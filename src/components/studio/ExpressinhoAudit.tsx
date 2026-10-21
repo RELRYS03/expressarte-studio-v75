@@ -40,7 +40,7 @@ export default function ExpressinhoAudit() {
   const [mode, setMode] = useState<Mode>("flatten_bottom");
   const [cutMm, setCutMm] = useState(2);
   const [targetFaces, setTargetFaces] = useState(100000);
-  const [prepared, setPrepared] = useState<string | null>(null);
+  const [prepared, setPrepared] = useState<Blob | null>(null);
   const [preparedReport, setPreparedReport] = useState<PrepareReport | null>(null);
   const [auditNotice, setAuditNotice] = useState("");
 
@@ -61,24 +61,40 @@ export default function ExpressinhoAudit() {
     if (!file || busy) return;
     setBusy(true); reset();
     try {
-      const original = await encodeStl(file);
-      const parameters = mode === "flatten_bottom"
-        ? { operation: mode, cutMm }
-        : { operation: mode, targetFaces };
-      const data = await postJson("/v1/prepare-stl", { stlBase64: original, parameters });
-      if (!data.stlBase64 || !data.report) throw new Error("O Blender não devolveu o STL.");
-      setPrepared(data.stlBase64);
-      setPreparedReport(data.report as PrepareReport);
-      try { await auditStl(data.stlBase64, "Preparado"); }
-      catch (e) { setAuditNotice("STL gerado, mas a auditoria posterior falhou. Verifique o fatiador."); }
+      if (file.size < 84 || file.size > 150*1024*1024) {
+        throw new Error("Selecione STL entre 84 bytes e 150 MB.");
+      }
+      const params = new URLSearchParams({operation:mode});
+      if (mode === "flatten_bottom") params.set("cutMm", String(cutMm));
+      else params.set("targetFaces", String(targetFaces));
+      const response = await fetch(API + "/v1/prepare-stl-binary?" + params.toString(), {
+        method:"POST", headers:{"Content-Type":"application/octet-stream"}, body:file,
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null) as {error?: string} | null;
+        throw new Error(result?.error || "Blender não conseguiu preparar o STL.");
+      }
+      const blob = await response.blob();
+      if (blob.size < 84) throw new Error("A resposta do Blender não contém um STL válido.");
+      setPrepared(blob);
+      setPreparedReport({
+        operation: mode,
+        trianglesBefore: Number(response.headers.get("X-Expressinho-Before") || 0),
+        trianglesAfter: Number(response.headers.get("X-Expressinho-After") || 0),
+        note: "Original preservado. Confira orientação, medidas, furos e paredes no Bambu Studio.",
+      });
+      if (blob.size <= 20*1024*1024) {
+        try { await auditStl(await encodeStl(new File([blob], "preparado.stl")), "Preparado"); }
+        catch { setAuditNotice("STL preparado, mas a auditoria automática falhou."); }
+      } else {
+        setAuditNotice("Arquivo preparado grande: auditoria automática limitada a 20 MB. Verifique no Bambu Studio.");
+      }
     } catch (e) { setError(e instanceof Error ? e.message : "Falha na preparação."); }
     finally { setBusy(false); }
   }
   function downloadPrepared() {
     if (!prepared) return;
-    const raw = atob(prepared);
-    const bytes = Uint8Array.from(raw, char => char.charCodeAt(0));
-    const url = URL.createObjectURL(new Blob([bytes], {type:"application/octet-stream"}));
+    const url = URL.createObjectURL(prepared);
     const a = document.createElement("a");
     a.href = url; a.download = "expressinho-preparado.stl"; a.click();
     URL.revokeObjectURL(url);
@@ -91,7 +107,7 @@ export default function ExpressinhoAudit() {
     </header>
     <div className="expressinho-creation-actions">
       <label style={{display:"inline-flex",alignItems:"center",gap:8,fontSize:12}}>
-        <Upload size={15}/> Escolher STL (máx. 20 MB)
+        <Upload size={15}/> Escolher STL (máx. 150 MB para preparar; 20 MB para auditar)
         <input type="file" accept=".stl" onChange={e => {setFile(e.target.files?.[0] || null);reset();}} />
       </label>
       <Button disabled={!file || busy} variant="outline" onClick={() => void analyze()}>
