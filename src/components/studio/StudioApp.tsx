@@ -37,6 +37,7 @@ import {
   Scaling,
   Combine,
   Undo2,
+  WandSparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -464,6 +465,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const [reset, setReset] = useState(0);
   const [wireframe, setWireframe] = useState(false);
   const [dialog, setDialog] = useState<"export" | "blender" | "help" | null>(null);
+  const [assistantMode, setAssistantMode] = useState<"create" | "audit" | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [mesh, setMesh] = useState<{
@@ -898,8 +900,32 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
             </div>
           )}
         </section>
-        {page === "studio" && <ExpressinhoCreation />}
-        {page === "studio" && <ExpressinhoAudit />}
+        {page === "studio" && <div className="expressinho-shortcuts" aria-label="Acesso às ferramentas do Expressinho">
+          <span><WandSparkles size={17}/> <strong>Expressinho</strong> <small>Seu editor 3D fica livre para trabalhar.</small></span>
+          <div>
+            <Button variant="outline" aria-expanded={assistantMode === "create"}
+              onClick={() => setAssistantMode(mode => mode === "create" ? null : "create")}>
+              <WandSparkles size={15}/> Criar chaveiro
+            </Button>
+            <Button variant="outline" aria-expanded={assistantMode === "audit"}
+              onClick={() => setAssistantMode(mode => mode === "audit" ? null : "audit")}>
+              <Stethoscope size={15}/> Preparar STL
+            </Button>
+          </div>
+        </div>}
+        {page === "studio" && assistantMode && <aside className="expressinho-drawer" aria-label={assistantMode === "create" ? "Criar chaveiro" : "Preparar arquivo STL"}
+          onKeyDown={event => { if (event.key === "Escape") setAssistantMode(null); }}>
+          <div className="expressinho-drawer-top">
+            <div><strong>{assistantMode === "create" ? "Criar chaveiro" : "Analisar e preparar STL"}</strong>
+              <small>Você pode continuar vendo a área de modelagem.</small>
+            </div>
+            <Button variant="ghost" size="icon" aria-label="Fechar painel do Expressinho"
+              title="Fechar painel" onClick={() => setAssistantMode(null)}>
+              <X size={18}/>
+            </Button>
+          </div>
+          {assistantMode === "create" ? <ExpressinhoCreation/> : <ExpressinhoAudit/>}
+        </aside>}
         {page === "studio" && (
           <>
             <div className={`workspace editor-expanded blender-ui ${imported ? "mesh-workspace" : ""}`} ref={workspaceRef}>
