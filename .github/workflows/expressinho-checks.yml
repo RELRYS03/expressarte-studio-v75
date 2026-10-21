@@ -1,0 +1,26 @@
+name: Expressinho - verificacao automatica
+on:
+  pull_request:
+  push:
+    branches:
+      - feature/expressinho-malha-auditor
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verificar sintaxe dos scripts Blender
+        run: python -m compileall -q scripts
+      - name: Instalar dependencias web
+        run: npm ci
+      - name: Compilar Studio
+        run: npm run build
+      - name: Testes do Studio
+        run: npm test -- --passWithNoTests
