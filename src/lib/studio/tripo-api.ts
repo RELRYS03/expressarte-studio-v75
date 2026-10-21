@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { validate3DPrompt } from "./expressinho-prompt";
 
 const API_BASE = "https://openapi.tripo3d.ai/v3";
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -114,4 +115,61 @@ export const getTripoTask = createServerFn({ method: "GET" })
         typeof output["rendered_image_url"] === "string" ? output["rendered_image_url"] : null,
       message: typeof task["message"] === "string" ? task["message"] : null,
     };
+  });
+
+/** Verifica disponibilidade e saldo da API sem iniciar tarefa e sem consumir créditos.
+ * Créditos Tripo Studio (site) e créditos da API são produtos separados.
+ */
+export const getTripoTextEngine = createServerFn({ method: "GET" }).handler(async () => {
+  const key = process.env["TRIPO_API_KEY"];
+  if (!key) return {
+    available: false, balance: null as number | null,
+    message: "API Tripo não configurada no servidor. Sua sessão do site Tripo Studio não é uma chave de API.",
+  };
+  try {
+    const data = await apiJson("/account/balance", { method: "GET" }, key);
+    const balance = typeof data["balance"] === "number" ? data["balance"] : null;
+    if (balance === null) return { available: false, balance, message: "A API não informou o saldo. Não vou criar tarefas sem confirmar." };
+    return {
+      available: balance > 0,
+      balance,
+      message: balance > 0
+        ? "API conectada. A geração pode consumir créditos; confirme cada pedido."
+        : "API conectada, mas seu saldo é zero. A geração paga permanece bloqueada.",
+    };
+  } catch {
+    return { available: false, balance: null as number | null,
+      message: "Não foi possível consultar o saldo da API. Confira sua chave e conexão." };
+  }
+});
+
+/** Gera modelo orgânico real via API documentada, nunca pela rota privada do Studio.
+ * Só é acionado após o usuário marcar explicitamente que aceita o gasto de créditos.
+ */
+export const createTripoTextTask = createServerFn({ method: "POST" })
+  .validator((raw: unknown) => {
+    const data = raw as {prompt?: unknown; confirmCredits?: unknown} | null;
+    if (data?.confirmCredits !== true) throw new Error("Confirme que deseja criar uma tarefa que pode consumir créditos da API.");
+    return { prompt: validate3DPrompt(data.prompt), confirmCredits: true };
+  })
+  .handler(async ({ data }) => {
+    const key = requireApiKey();
+    const credits = await apiJson("/account/balance", { method: "GET" }, key);
+    const balance = credits["balance"];
+    if (typeof balance !== "number" || balance <= 0)
+      throw new Error("Sua conta Tripo API está sem saldo disponível. Não foi criada nenhuma tarefa.");
+    const task = await apiJson("/generation/text-to-model", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: data.prompt,
+        model: "v3.1-20260211",
+        texture: true,
+        pbr: true,
+      }),
+    }, key);
+    if (typeof task["task_id"] !== "string" || !/^task_[\w-]{3,120}$/.test(task["task_id"])) {
+      throw new Error("A API não devolveu um identificador válido de tarefa.");
+    }
+    return { taskId: task["task_id"] as string };
   });
