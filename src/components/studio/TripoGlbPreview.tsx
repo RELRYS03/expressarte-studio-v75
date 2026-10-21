@@ -32,14 +32,17 @@ export default function TripoGlbPreview({file}:{file: Blob}) {
     file.arrayBuffer().then(async buffer => {
       const result = await loader.parseAsync(buffer,"");
       if (!active) return;
-      object = result.scene;
-      const bounds = new THREE.Box3().setFromObject(object);
+      const model = result.scene;
+      const bounds = new THREE.Box3().setFromObject(model);
       const size = bounds.getSize(new THREE.Vector3());
       const max = Math.max(size.x,size.y,size.z);
       if (!Number.isFinite(max) || max <= 0) return;
-      object.position.sub(bounds.getCenter(new THREE.Vector3()));
-      object.scale.multiplyScalar(2.7/max);
-      scene.add(object);
+      const pivot = new THREE.Group();
+      model.position.sub(bounds.getCenter(new THREE.Vector3()));
+      pivot.add(model);
+      pivot.scale.setScalar(2.7/max);
+      object = pivot;
+      scene.add(pivot);
       controls.target.set(0,0,0);
       controls.update();
     }).catch(()=>{/* arquivo pode ter texturas externas; o download continua disponível */});
