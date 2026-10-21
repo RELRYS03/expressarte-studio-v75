@@ -3582,3 +3582,113 @@ textarea:focus-visible {
 .expressinho-plan summary { cursor: pointer; }
 @media(max-width: 1150px) { .expressinho-creation-fields { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width: 650px) { .expressinho-creation-fields { grid-template-columns: minmax(0,1fr); } .expressinho-creation-heading { flex-wrap: wrap; } }
+
+
+/* UX Expressinho: editor sempre primeiro, assistente em painel lateral recolhivel. */
+.expressinho-shortcuts {
+  margin: 0 14px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #fffaf4;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.expressinho-shortcuts > span { display:flex; align-items:center; gap:9px; font-size:13px; color:var(--foreground); }
+.expressinho-shortcuts > span svg { color: var(--primary); }
+.expressinho-shortcuts small { font-size:11px; color: var(--muted-foreground); }
+.expressinho-shortcuts > div { display:flex; flex-wrap:wrap; gap:8px; }
+.expressinho-shortcuts button[aria-expanded="true"] { background:var(--primary); color:#fff; }
+.expressinho-drawer {
+  position: fixed;
+  z-index: 950;
+  top: 76px;
+  right: 0;
+  bottom: 0;
+  width: min(425px, 100vw);
+  padding: 0 0 24px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #fffaf4;
+  color: #34251f;
+  border-left: 1px solid #d8c0ab;
+  box-shadow: -12px 0 34px rgba(54, 34, 25, .22);
+}
+.expressinho-drawer-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  background: #f6eee4;
+  border-bottom: 1px solid var(--border);
+}
+.expressinho-drawer-top > div { display:flex; flex-direction:column; gap:2px; }
+.expressinho-drawer-top strong { font-size:15px; }
+.expressinho-drawer-top small { font-size:11px; color: #715b4f; }
+.expressinho-drawer .expressinho-creation {
+  margin: 0;
+  padding: 16px;
+  background: transparent;
+  color: #34251f;
+  border: 0;
+  border-radius: 0;
+}
+.expressinho-drawer .expressinho-creation-heading strong { font-size:15px; color:#34251f; }
+.expressinho-drawer .expressinho-creation-heading p { font-size:12px; color:#715d50; line-height:1.5; }
+.expressinho-drawer .expressinho-plan {
+  background:#f6eee4;
+  border-color:#d9c6b7;
+  color:#34251f;
+}
+.expressinho-drawer .expressinho-plan p { color:#604c40; font-size:12px; line-height:1.5; }
+.expressinho-drawer .expressinho-creation-fields { grid-template-columns: minmax(0, 1fr); }
+.expressinho-drawer .expressinho-creation-fields label { color:#493a33; font-size:12px; }
+.expressinho-drawer .expressinho-creation-fields select,
+.expressinho-drawer .expressinho-creation-fields input[type="number"],
+.expressinho-drawer .expressinho-creation-fields textarea {
+  color:#34251f; background:#fff; border-color:#c9b4a0; font-size:13px;
+}
+.expressinho-easy-grid { display:grid; grid-template-columns:1fr; gap:12px; margin-top:16px; }
+.expressinho-easy-grid label, .expressinho-advanced-content > label {
+  display:flex; flex-direction:column; gap:5px; font-weight:600; font-size:12px; color:#554036;
+}
+.expressinho-easy-grid input, .expressinho-easy-grid select, .expressinho-advanced-content textarea {
+  width:100%; min-width:0; padding:10px 11px; border-radius:7px;
+  border:1px solid #cdb9a5; color:#34251f; background:#fff; font-size:14px;
+}
+.expressinho-easy-grid input:focus-visible, .expressinho-easy-grid select:focus-visible,
+.expressinho-advanced-content textarea:focus-visible { outline:2px solid #b6805e; outline-offset:1px; }
+.expressinho-bridge-status {
+  display: flex; align-items:center; flex-wrap:wrap; gap:8px;
+  margin-top:14px; font-size:12px; color:#5b493d;
+}
+.expressinho-bridge-status button { margin-left:auto; }
+.expressinho-online, .expressinho-offline { width:8px; height:8px; flex:0 0 8px; border-radius:50%; background:#277044; }
+.expressinho-offline { background:#ba7140; }
+.expressinho-drawer .expressinho-creation-actions { gap:8px; }
+.expressinho-drawer .expressinho-creation-actions > button { min-height:37px; }
+.expressinho-drawer .expressinho-error { padding:12px; margin-top:13px; background:#fff0ea; border:1px solid #dcaaa0; border-radius:7px; }
+.expressinho-error strong { color:#933521; }
+.expressinho-error p { margin:6px 0 0; line-height:1.5; font-size:12px; }
+.expressinho-advanced { margin-top:20px; border-top:1px solid var(--border); padding-top:12px; }
+.expressinho-advanced-toggle {
+  width:100%; text-align:left; border:0; background:none;
+  color:#734429; padding:10px 4px; font-size:13px; font-weight:700; cursor:pointer;
+}
+.expressinho-advanced-toggle:hover, .expressinho-advanced-toggle:focus-visible { text-decoration:underline; }
+.expressinho-advanced-content { display:grid; gap:12px; margin-top:6px; }
+.expressinho-advanced-content > p { font-size:12px; line-height:1.5; color:#70564a; margin:0; }
+.expressinho-advanced-content .expressinho-image input { display:block; width:100%; font-weight:400; font-size:11px; }
+.expressinho-drawer .expressinho-image-preview img { max-width:100%; }
+@media(max-width: 730px) {
+  .expressinho-shortcuts { align-items:stretch; flex-direction:column; }
+  .expressinho-shortcuts small { display:none; }
+  .expressinho-shortcuts > div > button { flex:1; }
+  .expressinho-drawer { top:0; width:100vw; border-left:0; }
+}
