@@ -50,6 +50,7 @@ import {
 } from "@/lib/studio/model";
 import { ShapeIcon } from "./ShapeIcon";
 import ExpressinhoCreation from "./ExpressinhoCreation";
+import ExpressinhoAudit from "./ExpressinhoAudit";
 import { useStudio } from "./StudioProvider";
 import { coerceConfig } from "@/lib/studio/persistence";
 import { defaultPricing, calculatePricing } from "@/lib/studio/pricing";
@@ -898,6 +899,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
           )}
         </section>
         {page === "studio" && <ExpressinhoCreation />}
+        {page === "studio" && <ExpressinhoAudit />}
         {page === "studio" && (
           <>
             <div className={`workspace editor-expanded blender-ui ${imported ? "mesh-workspace" : ""}`} ref={workspaceRef}>
