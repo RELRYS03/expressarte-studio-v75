@@ -3733,3 +3733,51 @@ textarea:focus-visible {
   color: #705b50;
 }
 .im3-ai-options .im3-tripo { margin-top: 4px; }
+
+
+/* Expressinho IA: entrada real de texto para modelo 3D (sem apagar o conversor 2.5D). */
+.expressinho-text-home {
+  margin: 0 auto 22px;
+  border: 1px solid #cda98b;
+  border-radius: 15px;
+  background: linear-gradient(125deg,#fff9f0,#f2e1d1);
+  color: #34251f;
+  box-shadow: 0 8px 24px rgba(73,42,24,.07);
+}
+.expressinho-text-main { padding: clamp(18px,3vw,32px); max-width: 1040px; }
+.expressinho-eyebrow { display: inline-flex; gap:8px; align-items:center; color:#94502b; font-size:11px; font-weight:800; letter-spacing:.1em; }
+.expressinho-text-home h1 { font-size: clamp(23px,3vw,34px); line-height:1.18; font-weight:800; margin:10px 0 8px; letter-spacing:-.02em; }
+.expressinho-text-home p { font-size:13px; line-height:1.55; color:#70584a; margin: 6px 0 12px; }
+.expressinho-text-label { display:block; font-size:12px; font-weight:700; margin:18px 0 7px; }
+.expressinho-text-home textarea {
+  width:100%; min-height:92px; padding:13px 15px;
+  border-radius:9px; border:1px solid #c8a68d; background:#fffdf9;
+  color:#35271d; font-size:15px; resize:vertical; line-height:1.5;
+}
+.expressinho-text-home textarea:focus-visible { outline:2px solid #905231; outline-offset:2px; }
+.expressinho-engine-switch { display:flex; flex-wrap:wrap; gap:9px; margin-top:15px; }
+.expressinho-engine-switch button {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:10px 13px; border:1px solid #c8b09c; border-radius:8px;
+  background:#fffaf4; color:#6d4a37; font-weight:700; font-size:12px; cursor:pointer;
+}
+.expressinho-engine-switch button[aria-pressed="true"] { background:#814629; color:#fff; border-color:#814629; }
+.expressinho-engine-switch button:focus-visible { outline:2px solid #593421; outline-offset:2px; }
+.expressinho-engine-detail { margin:14px 0; padding:13px 15px; border-radius:8px; background:rgba(255,255,255,.65); border:1px solid #ead5c3; }
+.expressinho-engine-detail strong { font-size:13px; }
+.expressinho-engine-detail p { margin:7px 0 4px; font-size:12px; }
+.expressinho-action-line { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:9px; font-size:12px; }
+.expressinho-consent { display:flex; gap:10px; align-items:flex-start; font-size:12px; line-height:1.5; color:#644b3d; cursor:pointer; margin:13px 0; }
+.expressinho-consent input { margin-top:2px; flex:none; }
+.expressinho-text-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:15px; }
+.expressinho-text-actions > a, .expressinho-task-result > a { color:#754025; text-decoration:underline; font-weight:700; font-size:13px; }
+.expressinho-text-actions button:disabled { opacity:.55; cursor:not-allowed; }
+.expressinho-text-error { padding:11px 13px; margin-top:12px; background:#fff0eb; border:1px solid #ce8778; color:#863623; border-radius:7px; font-size:12px; line-height:1.5; }
+.expressinho-task-result { margin-top:14px; padding:14px; background:#fffaf4; border:1px solid #dfc5ae; border-radius:9px; }
+.expressinho-task-result strong { font-size:13px; overflow-wrap:anywhere; }
+.expressinho-result-preview { margin:10px 0; display:block; max-width:250px; max-height:210px; object-fit:contain; border-radius:8px; }
+@media(max-width:700px) {
+  .expressinho-text-main { padding:18px; }
+  .expressinho-engine-switch button { flex:1; min-width:160px; }
+  .expressinho-text-actions > button { flex:1; }
+}
