@@ -54,7 +54,7 @@ import ExpressinhoCreation from "./ExpressinhoCreation";
 import ExpressinhoAudit from "./ExpressinhoAudit";
 import { HANDOFF_STL_KEY } from "@/lib/studio/expressinho-prompt";
 import { generatedStlToFile } from "@/lib/studio/generated-stl";
-import { takeGlbForStudio } from "@/lib/studio/model-handoff";
+import { readGlbForStudio, clearGlbForStudio } from "@/lib/studio/model-handoff";
 import { convertGlbForStudio } from "@/lib/studio/glb-import";
 import { useStudio } from "./StudioProvider";
 import { coerceConfig } from "@/lib/studio/persistence";
@@ -635,9 +635,10 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     let cancelled = false;
     void (async () => {
       try {
-        const pending = await takeGlbForStudio();
+        const pending = await readGlbForStudio();
         if (!pending || cancelled) return;
-        await importGlb(pending,"tripo-modelo-3d.glb");
+        const imported = await importGlb(pending,"tripo-modelo-3d.glb");
+        if (imported && !cancelled) await clearGlbForStudio();
       } catch {
         if (!cancelled) notify("Falha ao receber GLB. Baixe o modelo e use Abrir GLB manualmente.");
       }
