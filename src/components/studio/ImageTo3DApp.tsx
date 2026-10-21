@@ -45,7 +45,6 @@ const Preview3D = lazy(() => import("./ImagePreview3D"));
 const menu = [
   { to: "/", label: "Criar com IA", icon: Sparkles },
   { to: "/studio", label: "Editor 3D", icon: Box },
-  { to: "/studio", label: "Editor 3D", icon: Box },
   { to: "/formas", label: "Formas", icon: Shapes },
   { to: "/catalogo", label: "Catálogo", icon: Store },
   { to: "/projetos", label: "Projetos", icon: FolderOpen },
