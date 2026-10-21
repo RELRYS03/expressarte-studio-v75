@@ -16,6 +16,7 @@ EXPRESSINHO_WORKER = ROOT / "scripts" / "expressinho_worker.py"
 AUDITOR = ROOT / "scripts" / "expressinho_audit.py"
 PREPARER = ROOT / "scripts" / "expressinho_prepare.py"
 from expressinho_prepare_specs import validate_spec
+from expressinho_triposr_specs import decode_image, local_config
 BLENDER = Path(os.environ.get(
     "EXPRESSARTE_BLENDER_EXE",
     r"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
@@ -69,6 +70,11 @@ class Handler(BaseHTTPRequestHandler):
         if not self._origin_ok():
             self._json(403, {"error": "Acesso permitido somente ao Studio local."})
             return
+        if self.path == "/v1/triposr/status":
+            info = local_config()
+            self._json(200, {"configured": info["configured"], "message": info["message"],
+                             "device": info.get("device")})
+            return
         if self.path != "/v1/health":
             self._json(404, {"error": "Rota inexistente."})
             return
@@ -81,6 +87,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._origin_ok():
             self._json(403, {"error": "Origem local não autorizada."})
+            return
+        if self.path == "/v1/triposr/generate":
+            self._triposr_generate()
             return
         if urlsplit(self.path).path == "/v1/prepare-stl-binary":
             self._prepare_stl_binary()
@@ -149,6 +158,47 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as error:
             print("Blender bridge error:", repr(error), flush=True)
             self._json(500, {"error": str(error) or "Falha na operação do Blender."})
+
+    def _triposr_generate(self):
+        """Explicit opt-in: run installed open-source TripoSR with image, no Tripo API."""
+        try:
+            cfg = local_config()
+            if not cfg["configured"]:
+                raise ValueError(cfg["message"])
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 16 <= length <= 8 * 1024 * 1024:
+                raise ValueError("Imagem ou pedido maior que 8 MB.")
+            data = json.loads(self.rfile.read(length))
+            raw, suffix = decode_image(data)
+            with tempfile.TemporaryDirectory(prefix="expressinho-triposr-") as temp:
+                work = Path(temp)
+                source = work / ("referencia" + suffix)
+                source.write_bytes(raw)
+                output = work / "gerado"
+                command = [
+                    cfg["interpreter"], cfg["runner"], str(source),
+                    "--output-dir", str(output),
+                    "--model-save-format", "glb",
+                    "--device", cfg["device"],
+                ]
+                result = subprocess.run(command, cwd=cfg["cwd"], capture_output=True,
+                                        text=True, timeout=900, check=False)
+                model = output / "0" / "mesh.glb"
+                if result.returncode or not model.is_file():
+                    print("TripoSR local error:", result.stderr[-3500:], flush=True)
+                    raise RuntimeError("TripoSR falhou. Confira GPU, dependencias e pesos no terminal da ponte.")
+                if not 24 <= model.stat().st_size <= 50 * 1024 * 1024:
+                    raise ValueError("GLB gerado vazio ou maior que 50 MB.")
+                glb = base64.b64encode(model.read_bytes()).decode("ascii")
+            self._json(200, {"ok": True, "glbBase64": glb,
+                             "message": "Modelo gerado localmente. Verifique a malha no Blender e Bambu Studio."})
+        except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
+            self._json(400, {"error": str(error)})
+        except subprocess.TimeoutExpired:
+            self._json(504, {"error": "TripoSR excedeu 15 minutos. Confira requisitos de GPU e memoria."})
+        except Exception as error:
+            print("TripoSR bridge failure:", repr(error), flush=True)
+            self._json(500, {"error": "Nao foi possivel gerar o modelo local. Veja o terminal da ponte."})
 
     def _prepare_stl_binary(self):
         """Streaming STL upload/download for large meshes (e.g. 1M+ triangles)."""
