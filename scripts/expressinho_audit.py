@@ -25,6 +25,7 @@ def inspect(path):
         try:
             bm.from_mesh(me)
             bm.verts.ensure_lookup_table()
+            bm.verts.index_update()
             totals["vertices"] += len(bm.verts)
             totals["triangles"] += sum(max(0,len(face.verts)-2) for face in bm.faces)
             totals["boundary_edges"] += sum(1 for e in bm.edges if e.is_boundary)
