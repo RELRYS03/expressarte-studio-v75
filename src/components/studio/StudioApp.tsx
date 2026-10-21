@@ -52,6 +52,8 @@ import {
 import { ShapeIcon } from "./ShapeIcon";
 import ExpressinhoCreation from "./ExpressinhoCreation";
 import ExpressinhoAudit from "./ExpressinhoAudit";
+import { HANDOFF_STL_KEY } from "@/lib/studio/expressinho-prompt";
+import { generatedStlToFile } from "@/lib/studio/generated-stl";
 import { useStudio } from "./StudioProvider";
 import { coerceConfig } from "@/lib/studio/persistence";
 import { defaultPricing, calculatePricing } from "@/lib/studio/pricing";
@@ -69,7 +71,7 @@ const ModelScene = lazy(() => import("./ModelScene"));
 export type StudioPage =
   "imagem" | "studio" | "formas" | "projetos" | "calculadora" | "mesh" | "comunidade" | "catalogo";
 const nav = [
-  { to: "/", label: "Imagem para 3D", icon: ImageUp, page: "imagem" },
+  { to: "/", label: "Criar com IA", icon: WandSparkles, page: "imagem" },
   { to: "/studio", label: "Studio 3D", icon: Box, page: "studio" },
   { to: "/formas", label: "Formas", icon: Shapes, page: "formas" },
   { to: "/catalogo", label: "Catálogo", icon: Store, page: "catalogo" },
@@ -594,6 +596,19 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       return false;
     }
   };
+  useEffect(() => {
+    // Recebe o STL da pagina principal, sem armazenamento permanente de arquivos.
+    try {
+      const pending = window.sessionStorage.getItem(HANDOFF_STL_KEY);
+      if (!pending) return;
+      window.sessionStorage.removeItem(HANDOFF_STL_KEY);
+      const file = generatedStlToFile(pending);
+      void importStl(file);
+    } catch {
+      notify("Não foi possível abrir automaticamente a peça. Use Abrir STL no editor.");
+    }
+  }, []);
+
   const commitMesh = (geometry: BufferGeometry, message: string) => {
     if (!imported) {
       geometry.dispose();
