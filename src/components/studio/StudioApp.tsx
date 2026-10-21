@@ -54,6 +54,8 @@ import ExpressinhoCreation from "./ExpressinhoCreation";
 import ExpressinhoAudit from "./ExpressinhoAudit";
 import { HANDOFF_STL_KEY } from "@/lib/studio/expressinho-prompt";
 import { generatedStlToFile } from "@/lib/studio/generated-stl";
+import { takeGlbForStudio } from "@/lib/studio/model-handoff";
+import { convertGlbForStudio } from "@/lib/studio/glb-import";
 import { useStudio } from "./StudioProvider";
 import { coerceConfig } from "@/lib/studio/persistence";
 import { defaultPricing, calculatePricing } from "@/lib/studio/pricing";
@@ -481,6 +483,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const [imported, setImported] = useState<{ name: string; geometry: BufferGeometry } | null>(null);
   const [undoGeometry, setUndoGeometry] = useState<BufferGeometry | null>(null);
   const importStlRef = useRef<HTMLInputElement>(null);
+  const importGlbRef = useRef<HTMLInputElement>(null);
   const mergeStlRef = useRef<HTMLInputElement>(null);
   const booleanStlRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -607,6 +610,39 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     } catch {
       notify("Não foi possível abrir automaticamente a peça. Use Abrir STL no editor.");
     }
+  }, []);
+
+  const importGlb = async (blob: Blob, filename = "expressinho-3d.glb"): Promise<boolean> => {
+    if (blob.size > 35 * 1024 * 1024 || blob.size < 20) {
+      notify("Selecione um arquivo GLB entre 20 bytes e 35 MB.");
+      return false;
+    }
+    try {
+      const geometry = await convertGlbForStudio(await blob.arrayBuffer(), 100);
+      setUndoGeometry(old => {old?.dispose();return null;});
+      setImported(old => {old?.geometry.dispose();return {name:filename,geometry};});
+      setView("3d");
+      setZoom(100);
+      setReset(r=>r+1);
+      notify("GLB carregado e normalizado para 100 mm de altura. Revise escala e paredes antes de imprimir.");
+      return true;
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível abrir GLB.");
+      return false;
+    }
+  };
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const pending = await takeGlbForStudio();
+        if (!pending || cancelled) return;
+        await importGlb(pending,"tripo-modelo-3d.glb");
+      } catch {
+        if (!cancelled) notify("Falha ao receber GLB. Baixe o modelo e use Abrir GLB manualmente.");
+      }
+    })();
+    return () => {cancelled=true;};
   }, []);
 
   const commitMesh = (geometry: BufferGeometry, message: string) => {
@@ -868,6 +904,17 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               </Button>
               <input
                 type="file"
+                accept=".glb"
+                className="hidden"
+                ref={importGlbRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void importGlb(file,file.name);
+                  e.currentTarget.value = "";
+                }}
+              />
+              <input
+                type="file"
                 accept=".stl"
                 className="hidden"
                 ref={importStlRef}
@@ -901,6 +948,10 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               />
               <Button variant="outline" onClick={() => importStlRef.current?.click()}>
                 <Upload /> Abrir STL
+              </Button>
+              <Button variant="outline" onClick={() => importGlbRef.current?.click()}
+                title="Importar GLB como malha para edição; o STL resultante não preserva as texturas">
+                <FileBox /> Abrir GLB
               </Button>
               <Button
                 variant="outline"
