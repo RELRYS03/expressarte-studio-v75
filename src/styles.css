@@ -3808,3 +3808,16 @@ textarea:focus-visible {
   color: #37291f;
 }
 .expressinho-configuration .expressinho-consent {margin: 0;}
+
+/* Janela de prévia com orbita e materiais originais do Tripo. */
+.expressinho-glb-preview {
+  width: min(100%, 660px);
+  height: 320px;
+  margin: 14px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #292b30;
+  touch-action: pan-y;
+}
+.expressinho-glb-preview canvas { display: block; width: 100%; height: 100%; }
+@media(max-width:700px) {.expressinho-glb-preview {height:260px;}}
