@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Download, ImagePlus, RefreshCw, WandSparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ExpressinhoTripoSR from "./ExpressinhoTripoSR";
+import { generatedStlToFile } from "@/lib/studio/generated-stl";
 
 type Shape = "circulo" | "coracao";
 type BridgeState = "checking" | "ready" | "offline";
@@ -19,7 +20,10 @@ function downloadBase64(content: string, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-export default function ExpressinhoCreation() {
+export default function ExpressinhoCreation({ onOpenModel, onShowEditor }: {
+  onOpenModel: (file: File) => Promise<boolean>;
+  onShowEditor: () => void;
+}) {
   const [shape, setShape] = useState<Shape>("circulo");
   const [widthMm, setWidthMm] = useState(80);
   const [name, setName] = useState("");
@@ -27,6 +31,8 @@ export default function ExpressinhoCreation() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<BasicResult | null>(null);
+  const [openedInStudio, setOpenedInStudio] = useState(false);
+  const [importError, setImportError] = useState("");
   const [advanced, setAdvanced] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -60,6 +66,8 @@ export default function ExpressinhoCreation() {
     if (busy) return;
     setError("");
     setResult(null);
+    setOpenedInStudio(false);
+    setImportError("");
     if (!Number.isFinite(widthMm) || widthMm < 30 || widthMm > 150) {
       setError("Escolha uma largura entre 30 e 150 mm.");
       return;
@@ -83,6 +91,14 @@ export default function ExpressinhoCreation() {
         throw new Error(data.error || "O Blender não conseguiu gerar os arquivos. Consulte o terminal da ponte.");
       }
       setResult({ stl: data.stlBase64, blend: data.blendBase64 });
+      try {
+        const stl = generatedStlToFile(data.stlBase64);
+        const loaded = await onOpenModel(stl);
+        setOpenedInStudio(loaded);
+        if (!loaded) setImportError("O Blender gerou o STL, mas o editor não conseguiu abrir. Você ainda pode baixá-lo abaixo.");
+      } catch (importFailure) {
+        setImportError(importFailure instanceof Error ? importFailure.message : "O STL não foi importado no editor.");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao gerar o chaveiro.");
     } finally {
@@ -145,10 +161,12 @@ export default function ExpressinhoCreation() {
       <strong>Não foi possível concluir.</strong><p>{error}</p>
     </div>}
     {result && <div role="status" className="expressinho-plan">
-      <strong>Arquivos criados!</strong>
-      <p>O STL e o arquivo editável .blend estão prontos para baixar. Verifique no fatiador antes de imprimir.</p>
+      <strong>{openedInStudio ? "Chaveiro criado e aberto no editor!" : "Chaveiro gerado no Blender!"}</strong>
+      <p>{openedInStudio ? "O modelo foi carregado na área de modelagem 3D. Você pode editar, exportar e baixar o projeto Blender." : "Baixe os arquivos ou verifique a mensagem de importação."} Revise a malha no Bambu Studio antes de imprimir.</p>
+      {importError && <p role="alert">{importError}</p>}
       <div className="expressinho-creation-actions">
-        <Button onClick={() => downloadBase64(result.stl, "expressinho-chaveiro.stl")}>
+        {openedInStudio && <Button onClick={onShowEditor}>Ver no editor 3D</Button>}
+        <Button variant={openedInStudio ? "outline" : "default"} onClick={() => downloadBase64(result.stl, "expressinho-chaveiro.stl")}>
           <Download size={15}/> Baixar STL
         </Button>
         <Button variant="outline" onClick={() => downloadBase64(result.blend, "expressinho-chaveiro.blend")}>

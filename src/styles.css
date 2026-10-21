@@ -3692,3 +3692,44 @@ textarea:focus-visible {
   .expressinho-shortcuts > div > button { flex:1; }
   .expressinho-drawer { top:0; width:100vw; border-left:0; }
 }
+
+
+/* Homepage: opcao paga de IA em bloco discreto; tarefas locais primeiro. */
+.im3-instructions {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #e9c7ad;
+  max-width: 560px;
+}
+.im3-ai-options {
+  max-width: 1380px;
+  margin: 16px auto 24px;
+  padding: 12px 16px;
+  border: 1px solid #e4d2c2;
+  border-radius: 10px;
+  background: #fffaf4;
+}
+.im3-ai-options > summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 35px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #6c402b;
+  list-style: none;
+}
+.im3-ai-options > summary::-webkit-details-marker { display: none; }
+.im3-ai-options > summary::after { content: "▸"; margin-left: auto; }
+.im3-ai-options[open] > summary::after { content: "▾"; }
+.im3-ai-options > summary:focus-visible { outline: 2px solid #8b4b2a; outline-offset: 3px; }
+.im3-ai-options > summary svg { width: 17px; height: 17px; flex: none; }
+.im3-ai-explain {
+  padding: 8px 0 12px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #705b50;
+}
+.im3-ai-options .im3-tripo { margin-top: 4px; }

@@ -490,8 +490,8 @@ export default function ImageTo3DApp() {
               <span>para o mundo 3D.</span>
             </h1>
             <p>
-              Transforme fotos, desenhos e logos em peças prontas para visualizar e preparar para
-              impressão.
+              Transforme fotos, desenhos e logos em relevos, medalhas e litofanias para impressão.
+              Personagens 360° exigem um motor de IA separado.
             </p>
             <div className="im3-generator-actions">
               <Button onClick={() => picker.current?.click()}>
@@ -520,20 +520,21 @@ export default function ImageTo3DApp() {
               </button>
             </div>
             <div className="im3-generator-options">
-              <span>Comece com</span>
+              <span>Opção da IA externa</span>
               <button
                 className={quality === "balanced" ? "chosen" : ""}
                 onClick={() => setQuality("balanced")}
               >
-                <CheckCircle2 size={15} /> Qualidade equilibrada
+                <CheckCircle2 size={15} /> Tripo equilibrado
               </button>
               <button
                 className={quality === "clean" ? "chosen" : ""}
                 onClick={() => setQuality("clean")}
               >
-                <Shapes size={15} /> Topologia limpa
+                <Shapes size={15} /> Tripo P1
               </button>
             </div>
+            <p className="im3-instructions">Como usar: escolha uma imagem → ajuste o relevo → exporte STL ou 3MF na seção de edição.</p>
             <div className="im3-generator-note">
               <span className="status-dot" /> Seus arquivos são processados localmente no navegador
             </div>
@@ -549,6 +550,12 @@ export default function ImageTo3DApp() {
             <div className="preview-chip chip-bottom">STL · 3MF</div>
           </div>
         </section>
+        <details className="im3-ai-options">
+          <summary><Sparkles size={16} /> Modelos 360° com IA externa (Tripo / Meshy) — opcional</summary>
+          <p className="im3-ai-explain">
+            Para personagens e modelos completos, selecione uma imagem acima e configure a API do serviço.
+            Essas operações podem consumir créditos; a conversão local em relevo e litofania é gratuita.
+          </p>
         <section className="im3-tripo" aria-labelledby="tripo-title">
           <div className="im3-tripo-copy">
             <span className="im3-eyebrow">
@@ -646,6 +653,7 @@ export default function ImageTo3DApp() {
           )}
         </section>
         <MeshyImageTo3D sourceFile={sourceFile} picture={picture} />
+        </details>
         <section className="im3-gallery">
           <div className="im3-gallery-heading">
             <div>
