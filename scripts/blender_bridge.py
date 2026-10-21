@@ -3,6 +3,8 @@
 import base64
 import json
 import os
+import shutil
+from urllib.parse import urlsplit, parse_qs
 from pathlib import Path
 import subprocess
 import tempfile
@@ -12,6 +14,8 @@ ROOT = Path(__file__).resolve().parent.parent
 WORKER = ROOT / "scripts" / "blender_worker.py"
 EXPRESSINHO_WORKER = ROOT / "scripts" / "expressinho_worker.py"
 AUDITOR = ROOT / "scripts" / "expressinho_audit.py"
+PREPARER = ROOT / "scripts" / "expressinho_prepare.py"
+from expressinho_prepare_specs import validate_spec
 BLENDER = Path(os.environ.get(
     "EXPRESSARTE_BLENDER_EXE",
     r"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
@@ -25,6 +29,7 @@ ALLOWED_ORIGINS = {
     "http://localhost:5173",
 }
 MAX_STL = 20 * 1024 * 1024
+MAX_BULK_STL = 150 * 1024 * 1024
 MAX_BODY = 50 * 1024 * 1024
 
 
@@ -76,6 +81,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._origin_ok():
             self._json(403, {"error": "Origem local não autorizada."})
+            return
+        if urlsplit(self.path).path == "/v1/prepare-stl-binary":
+            self._prepare_stl_binary()
+            return
+        if self.path == "/v1/prepare-stl":
+            self._prepare_stl()
             return
         if self.path == "/v1/audit-stl":
             self._audit_stl()
@@ -138,6 +149,121 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as error:
             print("Blender bridge error:", repr(error), flush=True)
             self._json(500, {"error": str(error) or "Falha na operação do Blender."})
+
+    def _prepare_stl_binary(self):
+        """Streaming STL upload/download for large meshes (e.g. 1M+ triangles)."""
+        try:
+            params = parse_qs(urlsplit(self.path).query, strict_parsing=True, max_num_fields=3)
+            if set(params) == {"operation", "cutMm"} and params.get("operation") == ["flatten_bottom"]:
+                spec = validate_spec({"operation":"flatten_bottom", "cutMm":float(params["cutMm"][0])})
+            elif set(params) == {"operation", "targetFaces"} and params.get("operation") == ["decimate"]:
+                spec = validate_spec({"operation":"decimate", "targetFaces":int(params["targetFaces"][0])})
+            else:
+                raise ValueError("Parametros desconhecidos.")
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 84 <= length <= MAX_BULK_STL:
+                raise ValueError("Envie um STL de 84 bytes a 150 MB.")
+            if not BLENDER.is_file() or not PREPARER.is_file():
+                raise ValueError("Blender ou preparador nao encontrado.")
+            if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/octet-stream":
+                raise ValueError("Envie um arquivo STL binario.")
+            with tempfile.TemporaryDirectory(prefix="expressinho-preparar-grande-") as temp:
+                folder = Path(temp)
+                inp = folder / "original.stl"
+                out = folder / "preparado.stl"
+                req = folder / "operacao.json"
+                summary = folder / "relatorio.json"
+                remaining = length
+                with inp.open("wb") as target:
+                    while remaining > 0:
+                        part = self.rfile.read(min(1024*1024, remaining))
+                        if not part:
+                            raise ValueError("Envio STL incompleto.")
+                        target.write(part)
+                        remaining -= len(part)
+                req.write_text(json.dumps(spec), encoding="utf-8")
+                command = [str(BLENDER), "--background", "--factory-startup",
+                           "--python", str(PREPARER), "--",
+                           str(req), str(inp), str(out), str(summary)]
+                result = subprocess.run(command, capture_output=True, text=True, timeout=300, check=False)
+                if result.returncode or not out.is_file() or not summary.is_file():
+                    print("Expressinho binary prepare error:", result.stderr[-3000:], flush=True)
+                    raise RuntimeError("Blender nao conseguiu processar este STL.")
+                size = out.stat().st_size
+                if not 84 <= size <= MAX_BULK_STL:
+                    raise ValueError("STL gerado excede o limite de 150 MB.")
+                report = json.loads(summary.read_text(encoding="utf-8"))
+                self.send_response(200)
+                self.send_header("Content-Type", "application/octet-stream")
+                self.send_header("Content-Length", str(size))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Disposition", 'attachment; filename="expressinho-preparado.stl"')
+                self.send_header("X-Expressinho-Before", str(report["trianglesBefore"]))
+                self.send_header("X-Expressinho-After", str(report["trianglesAfter"]))
+                self.send_header("X-Expressinho-Operation", report["operation"])
+                origin = self.headers.get("Origin")
+                if origin in ALLOWED_ORIGINS:
+                    self.send_header("Access-Control-Allow-Origin", origin)
+                    self.send_header("Vary", "Origin")
+                    self.send_header("Access-Control-Expose-Headers",
+                                     "X-Expressinho-Before, X-Expressinho-After, X-Expressinho-Operation")
+                self.end_headers()
+                with out.open("rb") as source:
+                    shutil.copyfileobj(source, self.wfile)
+        except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
+            self._json(400, {"error": str(error)})
+        except subprocess.TimeoutExpired:
+            self._json(504, {"error": "Tempo limite de 5 minutos excedido."})
+        except (BrokenPipeError, ConnectionResetError):
+            print("Cliente cancelou o download do STL.", flush=True)
+        except Exception as error:
+            print("Expressinho binary error:", repr(error), flush=True)
+            self._json(500, {"error": "Falha no Blender ao preparar STL grande."})
+
+    def _prepare_stl(self):
+        """Runs one validated geometry operation. Never accepts arbitrary scripts."""
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if length < 1 or length > MAX_BODY:
+                raise ValueError("Pedido excede o limite permitido.")
+            data = json.loads(self.rfile.read(length))
+            if not isinstance(data, dict) or set(data) != {"stlBase64", "parameters"}:
+                raise ValueError("Campos desconhecidos.")
+            if not isinstance(data["stlBase64"], str):
+                raise ValueError("STL invalido.")
+            spec = validate_spec(data["parameters"])
+            original = base64.b64decode(data["stlBase64"], validate=True)
+            if len(original) < 84 or len(original) > MAX_STL:
+                raise ValueError("Envie um STL de ate 20 MB nesta versao.")
+            if not BLENDER.is_file() or not PREPARER.is_file():
+                raise ValueError("Blender ou preparador nao encontrado.")
+            with tempfile.TemporaryDirectory(prefix="expressinho-preparar-") as temp:
+                folder = Path(temp)
+                inp = folder / "original.stl"
+                out = folder / "preparado.stl"
+                req = folder / "operacao.json"
+                report_file = folder / "operacao-relatorio.json"
+                inp.write_bytes(original)
+                req.write_text(json.dumps(spec), encoding="utf-8")
+                command = [str(BLENDER), "--background", "--factory-startup",
+                           "--python", str(PREPARER), "--",
+                           str(req), str(inp), str(out), str(report_file)]
+                result = subprocess.run(command, capture_output=True, text=True, timeout=180, check=False)
+                if result.returncode or not out.is_file() or not report_file.is_file():
+                    print("Expressinho preparador error:", result.stderr[-2500:], flush=True)
+                    raise RuntimeError("O Blender nao conseguiu preparar este STL.")
+                if out.stat().st_size < 84 or out.stat().st_size > MAX_STL:
+                    raise ValueError("Saida vazia ou superior a 20 MB.")
+                report = json.loads(report_file.read_text(encoding="utf-8"))
+                result_base64 = base64.b64encode(out.read_bytes()).decode("ascii")
+            self._json(200, {"ok": True, "stlBase64": result_base64, "report": report})
+        except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
+            self._json(400, {"error": str(error)})
+        except subprocess.TimeoutExpired:
+            self._json(504, {"error": "Blender demorou mais de 3 minutos para preparar o STL."})
+        except Exception as error:
+            print("Expressinho prepare error:", repr(error), flush=True)
+            self._json(500, {"error": "Falha no preparador Blender. Verifique o terminal da ponte."})
 
     def _audit_stl(self):
         try:
