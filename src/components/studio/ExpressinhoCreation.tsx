@@ -36,6 +36,33 @@ export default function ExpressinhoCreation() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [plan, setPlan] = useState<ReturnType<typeof makePlan> | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState<{stl: string; blend: string} | null>(null);
+  const [error, setError] = useState("");
+  const downloadModel = (b64: string, filename: string, mime: string) => {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], {type: mime}));
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  };
+  const runBlender = async () => {
+    if (!plan || kind !== "chaveiro" || generating) return;
+    setGenerating(true); setError(""); setResult(null);
+    try {
+      const shape = /cora[cç][aã]o/i.test(prompt) ? "coracao" : "circulo";
+      const named = plan.components.find(c => c.id === "texto");
+      const name = named && "value" in named ? String(named.value) : "";
+      const response = await fetch("http://127.0.0.1:8766/v1/create-keychain", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({kind:"chaveiro",shape,widthMm:width,name}),
+      });
+      const data = await response.json() as {stlBase64?:string;blendBase64?:string;error?:string};
+      if (!response.ok || !data.stlBase64 || !data.blendBase64) throw new Error(data.error || "Blender nao gerou o arquivo.");
+      setResult({stl:data.stlBase64,blend:data.blendBase64});
+    } catch(e) { setError(e instanceof Error ? e.message : "Falha na comunicacao com Blender."); }
+    finally { setGenerating(false); }
+  };
   useEffect(() => {
     if (!imageFile) { setPreview(null); return; }
     const url = URL.createObjectURL(imageFile);
@@ -85,7 +112,17 @@ export default function ExpressinhoCreation() {
       <div className="expressinho-creation-actions">
         <Button disabled={!valid} onClick={() => setPlan(makePlan(prompt.trim(), kind, width, !!imageFile))}><WandSparkles size={15}/> Preparar plano 3D</Button>
         {plan && <Button variant="outline" onClick={download}><Download size={15}/> Baixar plano JSON</Button>}
+        {plan && kind === "chaveiro" && <Button disabled={generating || width < 30 || width > 150} onClick={() => void runBlender()}><WandSparkles size={15}/> {generating ? "Gerando no Blender…" : "Gerar chaveiro no Blender"}</Button>}
       </div>
+      {error && <p role="alert" className="expressinho-plan">{error}</p>}
+      {result && <div className="expressinho-plan" role="status">
+        <strong>Blender terminou o chaveiro.</strong>
+        <p>Baixe STL para impressão e .blend para editar base, argola e texto separadamente.</p>
+        <div className="expressinho-creation-actions">
+          <Button onClick={() => downloadModel(result.stl, "expressinho-chaveiro.stl", "application/octet-stream")}><Download size={15}/> Baixar STL</Button>
+          <Button variant="outline" onClick={() => downloadModel(result.blend, "expressinho-chaveiro.blend", "application/octet-stream")}><Download size={15}/> Baixar .blend editável</Button>
+        </div>
+      </div>}
       {plan && <div className="expressinho-plan" role="status">
         <strong>Plano inicial pronto para revisar</strong>
         <p>{plan.kind} · {plan.dimensionsMm.width} × {plan.dimensionsMm.height} × {plan.dimensionsMm.depth} mm</p>
