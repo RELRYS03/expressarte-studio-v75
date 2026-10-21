@@ -39,10 +39,11 @@ import { stlBinary, threeMfFile, threeMfColoredFile, saveModel } from "@/lib/stu
 import { createTripoImageTask, getTripoTask } from "@/lib/studio/tripo-api";
 import { LAST_TRIPO_TASK_KEY, normalizeTripoTaskId } from "@/lib/studio/tripo-task-recovery";
 import MeshyImageTo3D from "./MeshyImageTo3D";
+import ExpressinhoTextTo3D from "./ExpressinhoTextTo3D";
 
 const Preview3D = lazy(() => import("./ImagePreview3D"));
 const menu = [
-  { to: "/", label: "Imagem para 3D", icon: ImageUp },
+  { to: "/", label: "Criar com IA", icon: Sparkles },
   { to: "/studio", label: "Editor 3D", icon: Box },
   { to: "/formas", label: "Formas", icon: Shapes },
   { to: "/catalogo", label: "Catálogo", icon: Store },
@@ -279,6 +280,9 @@ export default function ImageTo3DApp() {
       setMessage("Escolha uma imagem antes de gerar o modelo com IA.");
       return;
     }
+    if (!window.confirm("Enviar imagem ao Tripo API para gerar modelo 3D? Esta tarefa pode consumir créditos da API, que são diferentes dos créditos Tripo Studio. Deseja continuar?")) {
+      return;
+    }
     setTripoState("uploading");
     setTripoProgress(0);
     setTripoResult(null);
@@ -479,6 +483,7 @@ export default function ImageTo3DApp() {
         </div>
       </header>
       <main className="im3-page">
+        <ExpressinhoTextTo3D />
         <section className="im3-generator">
           <div className="im3-generator-copy">
             <div className="im3-eyebrow">

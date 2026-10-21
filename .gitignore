@@ -1,0 +1,16 @@
+# Segredos e configuracoes locais — nunca publicar chaves de API
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Instalações locais / artefatos
+node_modules/
+dist/
+.output/
+.tanstack/
+.vite/
+__pycache__/
+*.pyc
+.DS_Store
