@@ -216,11 +216,20 @@ export function buildModel(config: ModelConfig) {
     group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 256, 0.65, 8, true), baseMaterial));
   }
   if (config.ring) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.13, 1.9, 12, 64), baseMaterial);
-    ring.position.set(0, radius + radius * 0.09, config.thickness * 0.5);
+    // Ancora a argola no topo REAL do contorno proximo ao eixo central.
+    // No coracao, o encaixe central fica abaixo dos dois ombros.
+    const nearCenter = outline(config.shape, radius).getPoints(128)
+      .filter((point) => Math.abs(point.x) <= radius * 0.045);
+    const neckY = nearCenter.length ? Math.max(...nearCenter.map(point => point.y)) : radius;
+    const tube = 1.9;
+    const ringRadius = radius * 0.13;
+    const centerY = neckY + ringRadius + tube - 1.5;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(ringRadius, tube, 12, 64), baseMaterial);
+    ring.position.set(0, centerY, config.thickness * 0.5);
     group.add(ring);
-    const connector = new THREE.Mesh(new THREE.BoxGeometry(4, 7, config.thickness), baseMaterial);
-    connector.position.set(0, radius, config.thickness * 0.5);
+    // Haste entra na base e toca a parte inferior da argola sem tampar seu furo.
+    const connector = new THREE.Mesh(new THREE.BoxGeometry(tube * 2.3, 5, config.thickness), baseMaterial);
+    connector.position.set(0, neckY - 1.5, config.thickness * 0.5);
     group.add(connector);
   }
   const words = config.name.trim().split(/\s+/);
