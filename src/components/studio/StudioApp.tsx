@@ -558,10 +558,10 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       setBusy(false);
     }
   };
-  const importStl = async (file: File) => {
+  const importStl = async (file: File): Promise<boolean> => {
     if (!file.name.toLowerCase().endsWith(".stl") || file.size > 20 * 1024 * 1024) {
       notify("Selecione um STL de até 20 MB.");
-      return;
+      return false;
     }
     try {
       const { STLLoader } = await import("three/examples/jsm/loaders/STLLoader.js");
@@ -588,8 +588,10 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       setZoom(100);
       setReset((r) => r + 1);
       notify("STL carregado. Agora você pode transformar, cortar e montar malhas.");
+      return true;
     } catch {
       notify("Não foi possível abrir este STL. Confira o arquivo.");
+      return false;
     }
   };
   const commitMesh = (geometry: BufferGeometry, message: string) => {
@@ -924,7 +926,10 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               <X size={18}/>
             </Button>
           </div>
-          {assistantMode === "create" ? <ExpressinhoCreation/> : <ExpressinhoAudit/>}
+          {assistantMode === "create" ? <ExpressinhoCreation onOpenModel={importStl} onShowEditor={() => {
+            setAssistantMode(null);
+            workspaceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}/> : <ExpressinhoAudit/>}
         </aside>}
         {page === "studio" && (
           <>
