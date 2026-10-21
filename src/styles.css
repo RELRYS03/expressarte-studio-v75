@@ -3781,3 +3781,30 @@ textarea:focus-visible {
   .expressinho-engine-switch button { flex:1; min-width:160px; }
   .expressinho-text-actions > button { flex:1; }
 }
+
+/* Controles legíveis do motor Tripo; preserva os componentes existentes. */
+.expressinho-configuration {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  max-width: 630px;
+  padding: 12px 0 4px;
+}
+.expressinho-configuration > label:not(.expressinho-consent) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #614532;
+}
+.expressinho-configuration select {
+  width: 100%;
+  max-width: 480px;
+  padding: 10px;
+  border: 1px solid #c8a68d;
+  border-radius: 7px;
+  background: #fffcf7;
+  color: #37291f;
+}
+.expressinho-configuration .expressinho-consent {margin: 0;}
