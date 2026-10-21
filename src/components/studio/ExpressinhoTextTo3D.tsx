@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Box, Download, RefreshCw, Sparkles, WandSparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createTripoTextTask, getTripoTask, getTripoTextEngine } from "@/lib/studio/tripo-api";
+import { createTripoTextTask, getTripoTask, getTripoTextEngine, getTripoGlbForEditor } from "@/lib/studio/tripo-api";
+import { sendGlbToStudio } from "@/lib/studio/model-handoff";
+import { type TripoQuality } from "@/lib/studio/tripo-text-options";
 import { generatedStlToFile } from "@/lib/studio/generated-stl";
 import { HANDOFF_STL_KEY, interpretLocalKeychain, validate3DPrompt } from "@/lib/studio/expressinho-prompt";
 
@@ -27,6 +29,9 @@ export default function ExpressinhoTextTo3D() {
   const [prompt, setPrompt] = useState("");
   const [status, setStatus] = useState<EngineStatus | null>(null);
   const [confirmCredits, setConfirmCredits] = useState(false);
+  const [quality, setQuality] = useState<TripoQuality>("detailed");
+  const [forPrint, setForPrint] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
   const [checking, setChecking] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [taskId, setTaskId] = useState("");
@@ -71,7 +76,7 @@ export default function ExpressinhoTextTo3D() {
           setPhase("success");
           return;
         }
-        if (["failed","cancelled","banned"].includes(task.status)) {
+        if (["failed","cancelled","banned","expired"].includes(task.status)) {
           setError(task.message || "O Tripo não concluiu esta tarefa.");
           setPhase("error");
           return;
@@ -108,7 +113,7 @@ export default function ExpressinhoTextTo3D() {
           throw new Error("O motor Tripo API não está habilitado ou está sem créditos. Nenhuma tarefa foi criada.");
         if (!confirmCredits)
           throw new Error("Marque a confirmação de cobrança somente se quiser usar créditos da API.");
-        const {taskId:created} = await createTripoTextTask({data:{prompt:text,confirmCredits:true}});
+        const {taskId:created} = await createTripoTextTask({data:{prompt:text,quality,forPrint,confirmCredits:true}});
         setTaskId(created);
         setProgress(0);
         try {window.localStorage.setItem(LAST_TASK,created);} catch { /* armazenamento opcional */ }
@@ -135,6 +140,23 @@ export default function ExpressinhoTextTo3D() {
       setError(e instanceof Error ? e.message : "Falha na geração.");
       setPhase("error");
     }
+  }
+
+  async function openTripoInStudio() {
+    if (!taskId || !modelUrl || importBusy) return;
+    setError("");
+    setImportBusy(true);
+    try {
+      // O backend procura o URL pela tarefa Tripo, sem confiar numa URL do usuário.
+      const result = await getTripoGlbForEditor({data:{taskId}});
+      const binary = atob(result.glbBase64);
+      const bytes = Uint8Array.from(binary, char=>char.charCodeAt(0));
+      await sendGlbToStudio(new Blob([bytes],{type:"model/gltf-binary"}));
+      window.location.assign("/studio");
+    } catch(e) {
+      setError((e instanceof Error ? e.message : "Não foi possível importar GLB.") +
+        " Você também pode baixar o arquivo pelo link e abrir no Blender.");
+    } finally {setImportBusy(false);}
   }
 
   function openLocalInStudio() {
@@ -183,6 +205,27 @@ export default function ExpressinhoTextTo3D() {
             {status?.balance !== null && status?.balance !== undefined && <span>Saldo API: {status.balance.toLocaleString("pt-BR")} créditos</span>}
           </div>
         </div>
+        <div className="expressinho-engine-detail">
+          <strong>Qualidade da geração</strong>
+          <div className="expressinho-configuration">
+            <label htmlFor="expressinho-quality">Detalhamento
+              <select id="expressinho-quality" value={quality} onChange={e=>{setQuality(e.target.value as TripoQuality);setConfirmCredits(false);}}
+                disabled={phase==="creating" || phase==="running"}>
+                <option value="standard">Padrão — menor custo potencial</option>
+                <option value="detailed">Detalhada — geometria e texturas melhores</option>
+                <option value="extreme">Textura extrema 8K — créditos extras</option>
+              </select>
+            </label>
+            <label className="expressinho-consent">
+              <input type="checkbox" checked={forPrint}
+                disabled={phase==="creating" || phase==="running"}
+                onChange={e=>{setForPrint(e.target.checked);setConfirmCredits(false);}} />
+              <span>Para impressão 3D: priorizar geometria, sem textura/PBR. O GLB ainda precisará de análise.</span>
+            </label>
+          </div>
+          {quality==="extreme" && !forPrint && <p><strong>Atenção:</strong> textura extrema 8K pode cobrar créditos adicionais.</p>}
+          {quality==="extreme" && forPrint && <p>Sem texturas, a qualidade geométrica equivale à detalhada.</p>}
+        </div>
         <label className="expressinho-consent">
           <input type="checkbox" checked={confirmCredits} onChange={e => setConfirmCredits(e.target.checked)}
             disabled={!status?.available || phase==="creating" || phase==="running"}/>
@@ -207,7 +250,13 @@ export default function ExpressinhoTextTo3D() {
         {modelUrl && <>
           <p>Modelo 3D concluído. O link é temporário; baixe o GLB assim que possível.</p>
           {previewUrl && <img className="expressinho-result-preview" src={previewUrl} alt="Prévia do modelo 3D gerado"/>}
-          <a href={modelUrl} target="_blank" rel="noopener noreferrer">Baixar modelo GLB</a>
+          <div className="expressinho-text-actions">
+            <Button disabled={importBusy} onClick={() => void openTripoInStudio()}>
+              <Box size={15}/> {importBusy ? "Transferindo GLB para o editor…" : "Abrir modelo 3D no editor"}
+            </Button>
+            <a href={modelUrl} target="_blank" rel="noopener noreferrer">Baixar GLB original</a>
+          </div>
+          <p>O editor usa 100 mm de altura inicial como referência e mostra a geometria sem as cores/texturas originais. Ajuste a escala e revise a malha antes de imprimir.</p>
         </>}
       </div>}
       {localResult && <div className="expressinho-task-result" role="status">
