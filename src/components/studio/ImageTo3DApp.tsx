@@ -37,6 +37,7 @@ import {
 } from "@/lib/studio/image3d";
 import { stlBinary, threeMfFile, threeMfColoredFile, saveModel } from "@/lib/studio/print-exports";
 import { createTripoImageTask, getTripoTask } from "@/lib/studio/tripo-api";
+import { LAST_TRIPO_TASK_KEY, normalizeTripoTaskId } from "@/lib/studio/tripo-task-recovery";
 import MeshyImageTo3D from "./MeshyImageTo3D";
 
 const Preview3D = lazy(() => import("./ImagePreview3D"));
@@ -205,6 +206,28 @@ export default function ImageTo3DApp() {
     "idle" | "uploading" | "processing" | "success" | "failed"
   >("idle");
   const [tripoTaskId, setTripoTaskId] = useState("");
+  const [recoverTripoId, setRecoverTripoId] = useState("");
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(LAST_TRIPO_TASK_KEY);
+      if (saved && normalizeTripoTaskId(saved)) setRecoverTripoId(saved);
+    } catch {
+      // Navegadores podem bloquear armazenamento; a consulta manual continua disponível.
+    }
+  }, []);
+  const resumeTripo = () => {
+    const taskId = normalizeTripoTaskId(recoverTripoId);
+    if (!taskId) {
+      setMessage("Digite um ID válido da API Tripo v3, começando por task_.");
+      return;
+    }
+    setTripoResult(null);
+    setTripoTaskId(taskId);
+    setTripoProgress(0);
+    setTripoState("processing");
+    setMessage("Consultando tarefa existente. Nenhuma geração nova será iniciada.");
+    try { window.localStorage.setItem(LAST_TRIPO_TASK_KEY, taskId); } catch { /* armazenamento opcional */ }
+  };
   const [tripoProgress, setTripoProgress] = useState(0);
   const [tripoResult, setTripoResult] = useState<{
     modelUrl: string;
@@ -268,6 +291,8 @@ export default function ImageTo3DApp() {
         data: { base64: await fileBase64(file), mimeType: file.type, filename: file.name, quality },
       });
       setTripoTaskId(taskId);
+      setRecoverTripoId(taskId);
+      try { window.localStorage.setItem(LAST_TRIPO_TASK_KEY, taskId); } catch { /* armazenamento opcional */ }
       setTripoState("processing");
       setMessage(`Tarefa Tripo ${taskId} criada. A geração pode levar alguns minutos.`);
     } catch (error) {
@@ -282,11 +307,13 @@ export default function ImageTo3DApp() {
     let cancelled = false;
     let timer: number | undefined;
     let attempts = 0;
+    let consecutiveErrors = 0;
     const poll = async () => {
       if (cancelled) return;
       try {
         const result = await getTripoTask({ data: { taskId: tripoTaskId } });
         if (cancelled) return;
+        consecutiveErrors = 0;
         setTripoProgress(result.progress);
         if (result.status === "success" && result.modelUrl) {
           setTripoResult({ modelUrl: result.modelUrl, previewUrl: result.previewUrl });
@@ -311,10 +338,16 @@ export default function ImageTo3DApp() {
         }
         timer = window.setTimeout(poll, 2000);
       } catch (error) {
-        if (!cancelled) {
-          setTripoState("failed");
-          setMessage(error instanceof Error ? error.message : "Falha ao consultar o Tripo.");
+        if (cancelled) return;
+        consecutiveErrors++;
+        if (consecutiveErrors < 3 && attempts < 120) {
+          setMessage("Falha temporária ao consultar Tripo; tentando novamente sem criar nova tarefa.");
+          timer = window.setTimeout(poll, 3000 * consecutiveErrors);
+          return;
         }
+        setTripoState("failed");
+        setMessage((error instanceof Error ? error.message : "Falha ao consultar o Tripo.") +
+          " Você pode retomar a consulta pelo ID, sem pagar por outra geração.");
       }
     };
     timer = window.setTimeout(poll, 1500);
@@ -544,6 +577,29 @@ export default function ImageTo3DApp() {
                   : "Tripo v3.1 · qualidade equilibrada"}
               </span>
             </div>
+            <div className="im3-tripo-controls" style={{ marginTop: 10 }}>
+              <label htmlFor="tripo-existing-task" style={{ fontSize: 12 }}>Retomar tarefa da API:</label>
+              <input
+                id="tripo-existing-task"
+                aria-label="ID de tarefa existente do Tripo"
+                type="text"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="task_..."
+                value={recoverTripoId}
+                maxLength={130}
+                onChange={(event) => setRecoverTripoId(event.target.value)}
+                style={{ maxWidth: 260, width: "100%", padding: 8, borderRadius: 5 }}
+              />
+              <Button variant="outline" onClick={resumeTripo}
+                disabled={tripoState === "uploading" || tripoState === "processing" || !normalizeTripoTaskId(recoverTripoId)}>
+                Consultar tarefa
+              </Button>
+            </div>
+            <small>
+              Consulta o ID já criado na sua conta da API, mesmo após reabrir a página.
+              Não cria um novo modelo nem recupera tarefas da conta Studio sem acesso à API.
+            </small>
             {(tripoState === "uploading" || tripoState === "processing") && (
               <div
                 className="im3-tripo-progress"
