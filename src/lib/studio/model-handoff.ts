@@ -32,17 +32,31 @@ export async function sendGlbToStudio(binary: Blob): Promise<void> {
   } finally {db.close();}
 }
 
-export async function takeGlbForStudio(): Promise<Blob | null> {
+export async function readGlbForStudio(): Promise<Blob | null> {
   const db = await openDb();
   try {
     return await new Promise<Blob | null>((resolve,reject) => {
-      const tx = db.transaction(STORE, "readwrite");
+      const tx = db.transaction(STORE, "readonly");
       const request = tx.objectStore(STORE).get(KEY);
-      tx.objectStore(STORE).delete(KEY);
       let value: unknown = null;
       request.onsuccess = () => {value = request.result;};
       tx.oncomplete = () => resolve(value instanceof Blob ? value : null);
       tx.onerror = () => reject(tx.error || new Error("Leitura local falhou."));
+    });
+  } finally {db.close();}
+}
+
+/** Limpa somente depois de confirmar a importação; não perde o GLB se o React
+ * remontar o componente durante os testes em modo de desenvolvimento.
+ */
+export async function clearGlbForStudio(): Promise<void> {
+  const db = await openDb();
+  try {
+    await new Promise<void>((resolve,reject) => {
+      const tx = db.transaction(STORE,"readwrite");
+      tx.objectStore(STORE).delete(KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error || new Error("Não foi possível limpar o GLB temporário."));
     });
   } finally {db.close();}
 }
