@@ -11,6 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 ROOT = Path(__file__).resolve().parent.parent
 WORKER = ROOT / "scripts" / "blender_worker.py"
 EXPRESSINHO_WORKER = ROOT / "scripts" / "expressinho_worker.py"
+AUDITOR = ROOT / "scripts" / "expressinho_audit.py"
 BLENDER = Path(os.environ.get(
     "EXPRESSARTE_BLENDER_EXE",
     r"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
@@ -76,6 +77,9 @@ class Handler(BaseHTTPRequestHandler):
         if not self._origin_ok():
             self._json(403, {"error": "Origem local não autorizada."})
             return
+        if self.path == "/v1/audit-stl":
+            self._audit_stl()
+            return
         if self.path == "/v1/create-keychain":
             self._create_keychain()
             return
@@ -134,6 +138,39 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as error:
             print("Blender bridge error:", repr(error), flush=True)
             self._json(500, {"error": str(error) or "Falha na operação do Blender."})
+
+    def _audit_stl(self):
+        try:
+            size = int(self.headers.get("Content-Length", "0"))
+            if size < 1 or size > MAX_BODY:
+                raise ValueError("Arquivo excede o limite permitido.")
+            data = json.loads(self.rfile.read(size))
+            if not isinstance(data, dict) or set(data) != {"stlBase64"} or not isinstance(data["stlBase64"], str):
+                raise ValueError("Envie apenas o arquivo STL.")
+            raw = base64.b64decode(data["stlBase64"], validate=True)
+            if len(raw) < 84 or len(raw) > MAX_STL:
+                raise ValueError("STL invalido ou superior a 20 MB.")
+            if not BLENDER.is_file() or not AUDITOR.is_file():
+                raise ValueError("Blender ou auditor nao encontrado.")
+            with tempfile.TemporaryDirectory(prefix="expressinho-audit-") as temp:
+                inp = Path(temp) / "modelo.stl"
+                out = Path(temp) / "relatorio.json"
+                inp.write_bytes(raw)
+                cmd = [str(BLENDER), "--background", "--factory-startup", "--python",
+                       str(AUDITOR), "--", str(inp), str(out)]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=180, check=False)
+                if result.returncode or not out.is_file():
+                    print("Auditor error:", result.stderr[-2500:], flush=True)
+                    raise RuntimeError("Blender nao conseguiu analisar o STL.")
+                report = json.loads(out.read_text(encoding="utf-8"))
+            self._json(200, {"ok": True, "report": report})
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
+            self._json(400, {"error": str(error)})
+        except subprocess.TimeoutExpired:
+            self._json(504, {"error": "Tempo limite da analise atingido."})
+        except Exception as error:
+            print("Auditor failure:", repr(error), flush=True)
+            self._json(500, {"error": "Falha na auditoria do STL."})
 
     def _create_keychain(self):
         try:
