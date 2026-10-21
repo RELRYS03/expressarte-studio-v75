@@ -3,6 +3,7 @@ import { Box, Download, RefreshCw, Sparkles, WandSparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createTripoTextTask, getTripoTask, getTripoTextEngine, getTripoGlbForEditor } from "@/lib/studio/tripo-api";
 import { sendGlbToStudio } from "@/lib/studio/model-handoff";
+import TripoGlbPreview from "./TripoGlbPreview";
 import { type TripoQuality } from "@/lib/studio/tripo-text-options";
 import { generatedStlToFile } from "@/lib/studio/generated-stl";
 import { HANDOFF_STL_KEY, interpretLocalKeychain, validate3DPrompt } from "@/lib/studio/expressinho-prompt";
@@ -32,6 +33,9 @@ export default function ExpressinhoTextTo3D() {
   const [quality, setQuality] = useState<TripoQuality>("detailed");
   const [forPrint, setForPrint] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [glbBlob, setGlbBlob] = useState<Blob | null>(null);
+  const [show3d, setShow3d] = useState(false);
   const [checking, setChecking] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [taskId, setTaskId] = useState("");
@@ -103,6 +107,7 @@ export default function ExpressinhoTextTo3D() {
   async function generate() {
     if (phase === "creating" || phase === "running") return;
     setError(""); setModelUrl(null); setPreviewUrl(null); setLocalResult(null);
+    setGlbBlob(null);setShow3d(false);
     let text: string;
     try { text = validate3DPrompt(prompt); }
     catch(e) { setError(e instanceof Error ? e.message : "Descrição inválida."); return; }
@@ -142,16 +147,38 @@ export default function ExpressinhoTextTo3D() {
     }
   }
 
+  async function loadOriginalGlb(): Promise<Blob> {
+    if (glbBlob) return glbBlob;
+    if (!taskId || !modelUrl) throw new Error("A tarefa ainda não disponibilizou o GLB.");
+    const result = await getTripoGlbForEditor({data:{taskId}});
+    const binary = atob(result.glbBase64);
+    const bytes = Uint8Array.from(binary, char=>char.charCodeAt(0));
+    const blob = new Blob([bytes],{type:"model/gltf-binary"});
+    setGlbBlob(blob);
+    return blob;
+  }
+
+  async function showTripoPreview() {
+    if (!taskId || !modelUrl || previewBusy) return;
+    setError("");
+    setPreviewBusy(true);
+    try {
+      await loadOriginalGlb();
+      setShow3d(true);
+    } catch(e) {
+      setError((e instanceof Error ? e.message : "Não consegui abrir a prévia.") +
+        " O download original permanece disponível.");
+    } finally {setPreviewBusy(false);}
+  }
+
   async function openTripoInStudio() {
     if (!taskId || !modelUrl || importBusy) return;
     setError("");
     setImportBusy(true);
     try {
-      // O backend procura o URL pela tarefa Tripo, sem confiar numa URL do usuário.
-      const result = await getTripoGlbForEditor({data:{taskId}});
-      const binary = atob(result.glbBase64);
-      const bytes = Uint8Array.from(binary, char=>char.charCodeAt(0));
-      await sendGlbToStudio(new Blob([bytes],{type:"model/gltf-binary"}));
+      // Reutiliza o GLB da prévia; o servidor nunca recebe URL arbitrária.
+      const blob = await loadOriginalGlb();
+      await sendGlbToStudio(blob);
       window.location.assign("/studio");
     } catch(e) {
       setError((e instanceof Error ? e.message : "Não foi possível importar GLB.") +
@@ -251,11 +278,16 @@ export default function ExpressinhoTextTo3D() {
           <p>Modelo 3D concluído. O link é temporário; baixe o GLB assim que possível.</p>
           {previewUrl && <img className="expressinho-result-preview" src={previewUrl} alt="Prévia do modelo 3D gerado"/>}
           <div className="expressinho-text-actions">
+            <Button variant="outline" disabled={previewBusy || importBusy}
+              onClick={() => void showTripoPreview()}>
+              <Box size={15}/> {previewBusy ? "Preparando visualização…" : "Visualizar modelo 360°"}
+            </Button>
             <Button disabled={importBusy} onClick={() => void openTripoInStudio()}>
               <Box size={15}/> {importBusy ? "Transferindo GLB para o editor…" : "Abrir modelo 3D no editor"}
             </Button>
             <a href={modelUrl} target="_blank" rel="noopener noreferrer">Baixar GLB original</a>
           </div>
+          {show3d && glbBlob && <TripoGlbPreview file={glbBlob}/>}
           <p>O editor usa 100 mm de altura inicial como referência e mostra a geometria sem as cores/texturas originais. Ajuste a escala e revise a malha antes de imprimir.</p>
         </>}
       </div>}
