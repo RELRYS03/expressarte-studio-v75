@@ -779,6 +779,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     </>
   );
   const pricing = calculatePricing(cost);
+  const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   return (
     <>
       <header className="app-header">
@@ -1330,16 +1331,21 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
             <div className="tool-form">
               {(
                 [
-                  { key: "weight", label: "Peso do modelo (g)", step: 1 },
-                  { key: "price", label: "Preço do filamento (R$/kg)", step: 1 },
-                  { key: "hours", label: "Tempo de impressão (horas)", step: 0.5 },
-                  { key: "power", label: "Potência da impressora (W)", step: 1 },
+                  { key: "weight", label: "Peso da peça (g)", step: 1 },
+                  { key: "price", label: "Preço do filamento (R$/kg)", step: 0.5 },
+                  { key: "hours", label: "Tempo de impressão por peça (h)", step: 0.1 },
+                  { key: "power", label: "Potência média da impressora (W)", step: 1 },
                   { key: "kwh", label: "Tarifa de energia (R$/kWh)", step: 0.01 },
-                  { key: "labor", label: "Mão de obra (R$)", step: 0.5 },
-                  { key: "supplies", label: "Embalagem e insumos (R$)", step: 0.5 },
-                  { key: "maintenance", label: "Reserva para manutenção (R$)", step: 0.5 },
-                  { key: "fee", label: "Taxas sobre a venda (%)", step: 0.5 },
-                  { key: "margin", label: "Margem de lucro desejada (%)", step: 1 },
+                  { key: "machineValue", label: "Valor da impressora (R$)", step: 50 },
+                  { key: "machineLifeHours", label: "Vida útil estimada da máquina (h)", step: 100 },
+                  { key: "laborRate", label: "Valor da hora de trabalho (R$/h)", step: 0.5 },
+                  { key: "manualHours", label: "Tempo manual por peça (h)", step: 0.05 },
+                  { key: "supplies", label: "Embalagem e insumos por peça (R$)", step: 0.5 },
+                  { key: "maintenance", label: "Reserva de manutenção por peça (R$)", step: 0.5 },
+                  { key: "quantity", label: "Quantidade no lote (un.)", step: 1 },
+                  { key: "failureRate", label: "Reserva para falhas (%)", step: 1 },
+                  { key: "fee", label: "Taxas da venda/marketplace (%)", step: 0.5 },
+                  { key: "margin", label: "Lucro sobre o custo real (%)", step: 5 },
                 ] as const
               ).map((f) => (
                 <label key={f.key}>
@@ -1347,59 +1353,62 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   <input
                     className="text-input"
                     type="number"
-                    min={0}
+                    min={f.key === "quantity" ? 1 : 0}
                     step={f.step}
                     value={cost[f.key]}
                     onChange={(e) =>
-                      setCost((c) => ({ ...c, [f.key]: Math.max(0, Number(e.target.value)) }))
+                      setCost((c) => ({
+                        ...c,
+                        [f.key]: Math.max(0, Number(e.target.value)),
+                      }))
                     }
                   />
                 </label>
               ))}
             </div>
             <div className="cost-result">
-              <span>CUSTO ESTIMADO</span>
-              <strong>
-                {pricing.cost.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-              </strong>
+              <span>PREÇO SUGERIDO POR PEÇA</span>
+              <strong>{pricing.salePrice === null ? "Confira os valores" : money(pricing.salePrice)}</strong>
               <p>
-                Material:{" "}
-                {pricing.material.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
-              </p>
-              <p>
-                Energia:{" "}
-                {pricing.energy.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
+                Total do lote:{" "}
+                {pricing.salePriceTotal === null ? "—" : money(pricing.salePriceTotal)}
               </p>
               <hr className="my-6 border-border" />
+              <span>CUSTO UNITÁRIO</span>
+              <strong>{money(pricing.cost)}</strong>
+              <p>Lucro estimado por peça: {pricing.profit === null ? "—" : money(pricing.profit)}</p>
+              <p>Tempo total de impressão: {pricing.totalHours.toLocaleString("pt-BR")} h</p>
+              <p>Só filamento por peça: {money(pricing.material)}</p>
+              <hr className="my-6 border-border" />
+              <span>ANATOMIA DO CUSTO POR PEÇA</span>
+              <p>Filamento: {money(pricing.material)}</p>
+              <p>Energia: {money(pricing.energy)}</p>
+              <p>Desgaste da máquina: {money(pricing.machine)}</p>
+              <p>Mão de obra: {money(pricing.labor)}</p>
+              <p>Embalagem e insumos: {money(pricing.supplies)}</p>
+              <p>Manutenção: {money(pricing.maintenance)}</p>
+              <p>Reserva para falhas: {money(pricing.failureReserve)}</p>
+              <hr className="my-6 border-border" />
+              <p>Custo total do lote: {money(pricing.costTotal)}</p>
               <p>
-                Mão de obra, insumos e manutenção:{" "}
-                {(cost.labor + cost.supplies + cost.maintenance).toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
+                Lucro estimado no lote:{" "}
+                {pricing.profitTotal === null ? "—" : money(pricing.profitTotal)}
               </p>
-              <span>PREÇO SUGERIDO DE VENDA</span>
-              <strong>
-                {pricing.salePrice === null
-                  ? "Margem + taxas inválidas"
-                  : pricing.salePrice.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-              </strong>
               <p>
-                A margem de lucro é calculada sobre o preço de venda, não sobre o custo. Taxas são
-                percentuais do preço de venda. Informe a tributação aplicável em taxas.
+                O lucro é calculado sobre o custo completo. As taxas da venda são descontadas do
+                preço para preservar o lucro informado.
               </p>
               {!pricing.valid && (
-                <p role="alert">A soma de taxas e margem deve ser menor que 100%.</p>
+                <p role="alert">
+                  Confira os valores: quantidade deve ser pelo menos 1, taxa menor que 100% e, se
+                  houver valor de máquina, informe uma vida útil maior que zero.
+                </p>
               )}
+              <p>
+                <a href="https://calc3d.com.br/#calculadora" target="_blank" rel="noreferrer">
+                  Conferir no Calc3D ↗
+                </a>
+              </p>
             </div>
           </section>
         )}
