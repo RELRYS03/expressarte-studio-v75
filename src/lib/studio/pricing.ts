@@ -48,23 +48,10 @@ export function calculatePricing(c: Pricing) {
   // Margin is a markup on full unit cost; marketplace fees are a percentage of the sale price.
   const valid =
     Number.isFinite(cost) &&
-    Number.isFinite(quantity) &&
+    Object.values(c).every((value) => Number.isFinite(value) && value >= 0) &&
+    Number.isInteger(c.quantity) &&
     quantity >= 1 &&
-    c.weight >= 0 &&
-    c.price >= 0 &&
-    c.hours >= 0 &&
-    c.power >= 0 &&
-    c.kwh >= 0 &&
-    c.machineValue >= 0 &&
-    c.machineLifeHours >= 0 &&
     (c.machineValue === 0 || c.machineLifeHours > 0) &&
-    c.laborRate >= 0 &&
-    c.manualHours >= 0 &&
-    c.supplies >= 0 &&
-    c.maintenance >= 0 &&
-    c.failureRate >= 0 &&
-    c.margin >= 0 &&
-    c.fee >= 0 &&
     c.fee < 100;
 
   const salePrice = valid ? (cost * (1 + c.margin / 100)) / (1 - c.fee / 100) : null;
