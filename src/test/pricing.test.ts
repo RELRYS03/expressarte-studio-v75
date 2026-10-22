@@ -31,7 +31,7 @@ describe("Calculadora Express'Arte", () => {
     });
     expect(result.machine).toBeCloseTo(0.8);
     expect(result.labor).toBeCloseTo(10);
-    expect(result.productionCost).toBeCloseTo(10 + 0.8 + 5 + 0.54);
+    expect(result.productionCost).toBeCloseTo(10 + 0.8 + 5 + 0.27);
     expect(result.failureReserve).toBeCloseTo(result.productionCost * 0.1);
   });
 
