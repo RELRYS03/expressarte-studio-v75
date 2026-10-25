@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { closestCalibrations, correction, type Calibration } from "@/lib/studio/color-learning";
 type Paint = { id: string; name: string; hex: string };
 type Recipe = { id: number; target: string; grams: number; ingredients: { name: string; grams: number }[]; note: string };
 const starter: Paint[] = [
@@ -31,8 +32,13 @@ export default function ColorStudio() {
   const [reference, setReference] = useState<string | null>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const [palette, setPalette] = useState<string[]>([]);
+  const [sample, setSample] = useState<string | null>(null);
+  const [sampleHex, setSampleHex] = useState("#9324b6");
+  const [calibrations, setCalibrations] = useState<Calibration[]>(() => load("expressarte-color-calibration-v1", []));
+  const [selectedRecipe, setSelectedRecipe] = useState<number>(1);
   useEffect(() => { localStorage.setItem("expressarte-color-paints-v1", JSON.stringify(paints)); }, [paints]);
   useEffect(() => { localStorage.setItem("expressarte-color-recipes-v1", JSON.stringify(recipes)); }, [recipes]);
+  useEffect(() => { localStorage.setItem("expressarte-color-calibration-v1", JSON.stringify(calibrations)); }, [calibrations]);
   const savePhoto = (file: File | undefined, setter: (url: string | null) => void) => {
     if (!file) return;
     if (!file.type.startsWith("image/") || file.size > 8 * 1024 * 1024) { alert("Use imagem de até 8 MB."); return; }
@@ -124,6 +130,29 @@ export default function ColorStudio() {
           <div>{nearest.map(p=><p key={p.id}>{p.name} — {p.hex.toUpperCase()}</p>)}</div>
           <p style={{fontSize:13}}>Comparação aproximada por RGB, não é receita de mistura nem garante equivalência física. A foto pode conter variações de luz e sombra.</p>
         </div>}
+      </section>
+      <section style={{background:"white",borderRadius:16,padding:20}}>
+        <h2 style={{fontSize:22,fontWeight:700}}>Aprendizado com misturas reais</h2>
+        <p>Fotografe a amostra já seca. Selecione a cor da amostra e registre qual receita foi usada. O sistema aprende com seus próprios testes, sem IA externa.</p>
+        <label style={{display:"block",marginTop:12}}>Foto da amostra seca <input type="file" accept="image/*" onChange={e=>savePhoto(e.target.files?.[0],setSample)}/></label>
+        {sample && <img src={sample} alt="Amostra de tinta seca" style={{maxWidth:260,maxHeight:220,objectFit:"contain",display:"block",marginTop:10}}/>}
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:12}}>
+          <label>Cor medida da amostra <input type="color" value={sampleHex} onChange={e=>setSampleHex(e.target.value)}/></label>
+          <label>Receita testada <select value={selectedRecipe} onChange={e=>setSelectedRecipe(Number(e.target.value))}>{recipes.map(r=><option key={r.id} value={r.id}>{r.target} • {r.grams} g • #{r.id}</option>)}</select></label>
+        </div>
+        <p style={{marginTop:10}}>Referência: <span style={{display:"inline-block",width:18,height:18,background:target,verticalAlign:"middle"}}/> {target} | Amostra: <span style={{display:"inline-block",width:18,height:18,background:sampleHex,verticalAlign:"middle"}}/> {sampleHex}</p>
+        <p><strong>Orientação:</strong> {correction(target,sampleHex)}</p>
+        <button style={{background:"#76513a",color:"white",padding:10,borderRadius:8,marginTop:10}} onClick={()=>{
+          const r=recipes.find(x=>x.id===selectedRecipe);if(!r)return;
+          setCalibrations(old=>[{id:Date.now(),target,measured:sampleHex,date:new Date().toISOString(),ingredients:r.ingredients.map(i=>({name:i.name,grams:i.grams,hex:paints.find(p=>p.name===i.name)?.hex||"#808080"}))},...old]);
+        }}>Registrar teste real</button>
+        <h3 style={{fontWeight:700,marginTop:16}}>Testes anteriores mais próximos da cor selecionada</h3>
+        {closestCalibrations(target,calibrations).map(c=><div key={c.id} style={{padding:10,borderBottom:"1px solid #ddd"}}>
+          <span style={{display:"inline-block",background:c.measured,width:24,height:24,verticalAlign:"middle",marginRight:8}}/>
+          {c.measured} — {c.ingredients.map(i=>i.name+" "+i.grams+"g").join(" + ")}
+          <button style={{marginLeft:10}} onClick={()=>setCalibrations(old=>old.filter(x=>x.id!==c.id))}>Excluir</button>
+        </div>)}
+        <p style={{fontSize:13,marginTop:10}}>Para medir com maior precisão, fotografe referência e amostra sob a mesma luz, com fundo neutro. A cor da foto é uma estimativa; não há leitura de pigmentos por espectrofotômetro.</p>
       </section>
       <section style={{background:"white",borderRadius:16,padding:20}}>
         <h2 style={{fontSize:22,fontWeight:700}}>Histórico de receitas experimentais</h2>
