@@ -802,6 +802,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               {n.label}
             </Link>
           ))}
+          <Link to="/color-studio" className="nav-link"><Palette /> Color Studio</Link>
         </nav>
         <div className="header-end">
           <span className="version">STUDIO v7.5</span>
