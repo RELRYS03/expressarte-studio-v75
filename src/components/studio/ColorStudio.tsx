@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 type Paint = { id: string; name: string; hex: string };
 type Recipe = { id: number; target: string; grams: number; ingredients: { name: string; grams: number }[]; note: string };
@@ -29,6 +29,8 @@ export default function ColorStudio() {
   const [hex, setHex] = useState("#a06090");
   const [photo, setPhoto] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const [palette, setPalette] = useState<string[]>([]);
   useEffect(() => { localStorage.setItem("expressarte-color-paints-v1", JSON.stringify(paints)); }, [paints]);
   useEffect(() => { localStorage.setItem("expressarte-color-recipes-v1", JSON.stringify(recipes)); }, [recipes]);
   const savePhoto = (file: File | undefined, setter: (url: string | null) => void) => {
@@ -36,6 +38,36 @@ export default function ColorStudio() {
     if (!file.type.startsWith("image/") || file.size > 8 * 1024 * 1024) { alert("Use imagem de até 8 MB."); return; }
     const reader = new FileReader(); reader.onload = () => setter(typeof reader.result === "string" ? reader.result : null); reader.readAsDataURL(file);
   };
+  const extract = (x: number, y: number) => {
+    const img = imageRef.current;
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    const canvas = document.createElement("canvas");
+    const w = Math.min(400, img.naturalWidth);
+    canvas.width = w; canvas.height = Math.max(1, Math.round(w * img.naturalHeight / img.naturalWidth));
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const sample = (sx: number, sy: number) => {
+      const k = (Math.min(canvas.height-1,Math.max(0,sy))*canvas.width+Math.min(canvas.width-1,Math.max(0,sx)))*4;
+      return "#" + [px[k],px[k+1],px[k+2]].map(v=>v.toString(16).padStart(2,"0")).join("");
+    };
+    setTarget(sample(Math.floor(x*canvas.width),Math.floor(y*canvas.height)));
+    const counts = new Map<string,number>();
+    for(let py=0;py<canvas.height;py+=4) for(let pxx=0;pxx<canvas.width;pxx+=4) {
+      const k=(py*canvas.width+pxx)*4;
+      if(px[k+3]<128)continue;
+      const q=[px[k],px[k+1],px[k+2]].map(v=>Math.min(255,Math.round(v/32)*32));
+      const key="#" + q.map(v=>v.toString(16).padStart(2,"0")).join("");
+      counts.set(key,(counts.get(key)||0)+1);
+    }
+    setPalette([...counts].sort((a,b)=>b[1]-a[1]).slice(0,8).map(([c])=>c));
+  };
+  const nearest = paints.map(p=>{
+    const rgb=(h:string)=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+    const a=rgb(target),b=rgb(p.hex);
+    return {...p,distance:Math.sqrt(a.reduce((sum,v,i)=>sum+(v-b[i])**2,0))};
+  }).sort((a,b)=>a.distance-b.distance).slice(0,3);
   const addPaint = () => {
     if (!name.trim()) return;
     setPaints(old => [...old, { id: code.trim() || String(Date.now()), name: name.trim(), hex }]);
@@ -76,6 +108,22 @@ export default function ColorStudio() {
         <div style={{display:"flex",gap:20,flexWrap:"wrap",marginTop:12}}>
           {([{title:"Peça original",src:photo,set:setPhoto},{title:"Referência pintada",src:reference,set:setReference}]).map(item=><label key={item.title} style={{flex:"1 1 230px"}}><strong>{item.title}</strong><input type="file" accept="image/*" onChange={e=>savePhoto(e.target.files?.[0],item.set)} />{item.src&&<img alt={item.title} src={item.src} style={{maxWidth:"100%",maxHeight:240,objectFit:"contain"}}/>}</label>)}
         </div>
+      </section>
+      <section style={{background:"white",borderRadius:16,padding:20}}>
+        <h2 style={{fontSize:22,fontWeight:700}}>Capturar cor por imagem</h2>
+        <p>Envie uma imagem e toque no ponto desejado. A cor capturada será enviada ao seletor acima.</p>
+        <input type="file" accept="image/*" aria-label="Imagem para capturar cores" onChange={e=>savePhoto(e.target.files?.[0],setReference)}/>
+        {reference && <div style={{marginTop:12}}>
+          <img ref={imageRef} src={reference} alt="Imagem para selecionar uma cor" onClick={e=>{
+            const box=e.currentTarget.getBoundingClientRect();
+            extract((e.clientX-box.left)/box.width,(e.clientY-box.top)/box.height);
+          }} onLoad={()=>extract(0.5,0.5)} style={{display:"block",width:"100%",maxWidth:550,height:"auto",cursor:"crosshair",borderRadius:10}}/>
+          <h3 style={{fontWeight:700,marginTop:12}}>Cores frequentes na imagem</h3>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{palette.map(c=><button key={c} onClick={()=>setTarget(c)} title={c} aria-label={"Selecionar "+c} style={{background:c,width:46,height:46,borderRadius:8,border:"2px solid #aaa"}}/>)}</div>
+          <h3 style={{fontWeight:700,marginTop:12}}>Tintas cadastradas mais próximas (cor digital)</h3>
+          <div>{nearest.map(p=><p key={p.id}>{p.name} — {p.hex.toUpperCase()}</p>)}</div>
+          <p style={{fontSize:13}}>Comparação aproximada por RGB, não é receita de mistura nem garante equivalência física. A foto pode conter variações de luz e sombra.</p>
+        </div>}
       </section>
       <section style={{background:"white",borderRadius:16,padding:20}}>
         <h2 style={{fontSize:22,fontWeight:700}}>Histórico de receitas experimentais</h2>
