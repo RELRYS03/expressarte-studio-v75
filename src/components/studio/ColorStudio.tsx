@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { closestCalibrations, correction, type Calibration } from "@/lib/studio/color-learning";
+import { decodeImage } from "@/lib/studio/image3d";
 type Paint = { id: string; name: string; hex: string };
 type Recipe = { id: number; target: string; grams: number; ingredients: { name: string; grams: number }[]; note: string };
 const starter: Paint[] = [
@@ -36,6 +37,8 @@ export default function ColorStudio() {
   const [sampleHex, setSampleHex] = useState("#9324b6");
   const [calibrations, setCalibrations] = useState<Calibration[]>(() => load("expressarte-color-calibration-v1", []));
   const [selectedRecipe, setSelectedRecipe] = useState<number>(1);
+  const [samplePixels, setSamplePixels] = useState<{width:number;height:number;rgba:Uint8ClampedArray}|null>(null);
+  const [sampleError, setSampleError] = useState("");
   useEffect(() => { localStorage.setItem("expressarte-color-paints-v1", JSON.stringify(paints)); }, [paints]);
   useEffect(() => { localStorage.setItem("expressarte-color-recipes-v1", JSON.stringify(recipes)); }, [recipes]);
   useEffect(() => { localStorage.setItem("expressarte-color-calibration-v1", JSON.stringify(calibrations)); }, [calibrations]);
@@ -74,6 +77,36 @@ export default function ColorStudio() {
     const a=rgb(target),b=rgb(p.hex);
     return {...p,distance:Math.sqrt(a.reduce((sum,v,i)=>sum+(v-b[i])**2,0))};
   }).sort((a,b)=>a.distance-b.distance).slice(0,3);
+  const readSample = async (file?: File) => {
+    if (!file) return;
+    setSampleError("");
+    try {
+      const source = await decodeImage(file);
+      setSamplePixels(source);
+      savePhoto(file,setSample);
+    } catch(error) {
+      setSamplePixels(null); setSample(null);
+      setSampleError(error instanceof Error ? error.message : "Não foi possível ler a amostra.");
+    }
+  };
+  const selectSamplePixel = (event: React.MouseEvent<HTMLImageElement>) => {
+    if (!samplePixels) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = Math.min(samplePixels.width-1,Math.max(0,Math.floor((event.clientX-rect.left)/rect.width*samplePixels.width)));
+    const y = Math.min(samplePixels.height-1,Math.max(0,Math.floor((event.clientY-rect.top)/rect.height*samplePixels.height)));
+    const values:number[][] = [];
+    for(let yy=Math.max(0,y-2);yy<=Math.min(samplePixels.height-1,y+2);yy++)
+      for(let xx=Math.max(0,x-2);xx<=Math.min(samplePixels.width-1,x+2);xx++){
+        const offset=(yy*samplePixels.width+xx)*4;
+        if(samplePixels.rgba[offset+3]>=128)values.push(Array.from(samplePixels.rgba.slice(offset,offset+3)));
+      }
+    if(!values.length)return;
+    const rgb=[0,1,2].map(channel=>{
+      const sorted=values.map(v=>v[channel]).sort((a,b)=>a-b);
+      return sorted[Math.floor(sorted.length/2)];
+    });
+    setSampleHex("#"+rgb.map(v=>v.toString(16).padStart(2,"0")).join(""));
+  };
   const addPaint = () => {
     if (!name.trim()) return;
     setPaints(old => [...old, { id: code.trim() || String(Date.now()), name: name.trim(), hex }]);
@@ -134,8 +167,10 @@ export default function ColorStudio() {
       <section style={{background:"white",borderRadius:16,padding:20}}>
         <h2 style={{fontSize:22,fontWeight:700}}>Aprendizado com misturas reais</h2>
         <p>Fotografe a amostra já seca. Selecione a cor da amostra e registre qual receita foi usada. O sistema aprende com seus próprios testes, sem IA externa.</p>
-        <label style={{display:"block",marginTop:12}}>Foto da amostra seca <input type="file" accept="image/*" onChange={e=>savePhoto(e.target.files?.[0],setSample)}/></label>
-        {sample && <img src={sample} alt="Amostra de tinta seca" style={{maxWidth:260,maxHeight:220,objectFit:"contain",display:"block",marginTop:10}}/>}
+        <label style={{display:"block",marginTop:12}}>Foto da amostra seca <input type="file" accept="image/*" onChange={e=>void readSample(e.target.files?.[0])}/></label>
+        {sample && <img src={sample} alt="Amostra de tinta seca — toque para capturar a cor" onClick={selectSamplePixel} style={{maxWidth:260,maxHeight:220,objectFit:"contain",display:"block",marginTop:10,cursor:"crosshair"}}/>}
+        {sampleError && <p role="alert">{sampleError}</p>}
+        {sample && <p>Toque na amostra para capturar a cor. Usamos a mediana de uma área de 5×5 pixels para reduzir ruído.</p>}
         <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:12}}>
           <label>Cor medida da amostra <input type="color" value={sampleHex} onChange={e=>setSampleHex(e.target.value)}/></label>
           <label>Receita testada <select value={selectedRecipe} onChange={e=>setSelectedRecipe(Number(e.target.value))}>{recipes.map(r=><option key={r.id} value={r.id}>{r.target} • {r.grams} g • #{r.id}</option>)}</select></label>
