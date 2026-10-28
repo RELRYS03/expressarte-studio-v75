@@ -60,16 +60,19 @@ export default function ModelScene({
     const fill = new THREE.DirectionalLight(0xffd59d, 1.7);
     fill.position.set(80, 30, -60);
     scene.add(fill);
+    // Bambu Lab A1: keep the 256 mm build plate distinct from the background.
+    // Grid lines sit just above the plate, but below models resting at y = 0.
+    const bedSize = 256;
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(1500, 1500),
-      new THREE.MeshStandardMaterial({ color: sceneColor("--viewport"), roughness: 1 }),
+      new THREE.PlaneGeometry(bedSize, bedSize),
+      new THREE.MeshStandardMaterial({ color: sceneColor("--viewport"), roughness: 1, side: THREE.DoubleSide }),
     );
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.8;
+    floor.position.y = -0.04;
     floor.receiveShadow = true;
     scene.add(floor);
-    const grid = new THREE.GridHelper(1000, 100, sceneColor("--grid"), sceneColor("--grid"));
-    grid.position.y = -0.7;
+    const grid = new THREE.GridHelper(bedSize, 16, sceneColor("--grid"), sceneColor("--grid"));
+    grid.position.y = -0.02;
     scene.add(grid);
     sceneRef.current = { scene, camera, controls, model: null };
     const resize = () => {
