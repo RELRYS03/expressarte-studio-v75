@@ -3,7 +3,8 @@ on:
   pull_request:
     paths:
       - 'src/lib/hunyuan3d-client.ts'
-      - 'src/lib/hunyuan3d-client.test.ts'
+      - 'src/lib/hunyuan3d-client*.test.ts'
+      - 'src/test/fixtures/hunyuan-glb.ts'
       - '.github/workflows/validate-hunyuan.yml'
       - 'package.json'
       - 'package-lock.json'

@@ -62,3 +62,23 @@ Fixar commit do servidor e revisão dos pesos; conferir licença e GPU. Testar
 PNG/JPEG, base64/data URL, textura/fundo/seed, jobs inválidos, falha de GPU,
 concorrência e recuperação. Guardar logs sem imagens/segredos e GLBs reais.
 Depois validar a malha, dimensões, STL/3MF e fatiamento no Bambu Studio.
+
+## Integração HTTP simulada
+
+`src/lib/hunyuan3d-client.http.test.ts` abre um servidor Node temporário em
+`127.0.0.1`, porta aleatória, e usa o `fetch` real do cliente. O servidor é
+encerrado após cada teste; nenhuma porta pública ou serviço externo é usado.
+
+```sh
+npm test -- --run src/lib/hunyuan3d-client.http.test.ts
+```
+
+Os 10 casos cobrem health, envio do PNG/JSON e opções, UID, sequência
+processing → texturing → completed, download base64 e binário, falha de job,
+GLB corrompido nas duas rotas, HTTP 503 sem reenvio, timeout antes dos cabeçalhos
+e durante o corpo, cancelamento com conexão encerrada e servidor parado.
+A fixture GLB de um triângulo é compartilhada com os testes unitários.
+
+A sequência de consultas é um driver de teste limitado a três tentativas.
+Não implementa polling de produção nem comprova comportamento do servidor
+Tencent, geração a partir da imagem, qualidade da malha, UI ou impressão.
