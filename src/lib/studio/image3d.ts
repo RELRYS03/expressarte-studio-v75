@@ -88,7 +88,7 @@ export function makeMedalMesh(src: RasterSource, config: MedalSettings): Printab
     occupied[y * w + x] = alpha > 32 && lumin < threshold ? 1 : 0;
   }
   const inside = (x: number,y: number) => { if (x < 0 || y < 0 || x >= w || y >= h) return false; const px=(x+.5)/w*2-1, py=(y+.5)/h*2-1; return px*px+py*py < 1; };
-  for(let y=0;y<=h;y++) for(let x=0;x<=w;x++) { const px=x/w*2-1,py=y/h*2-1; tops[y*nx+x]=base+(px*px+py*py<=Math.max(0,1-border/Math.max(widthMm,heightMm)*2)?relief:0); }
+  for(let y=0;y<=h;y++) for(let x=0;x<=w;x++) { const px=x/w*2-1,py=y/h*2-1; tops[y*nx+x]=base+(px*px+py*py>=Math.max(0,1-border/Math.max(widthMm,heightMm)*2)&&px*px+py*py<=1?relief*0.5:0); }
   const positions=new Float32Array(points*2*3); for(let y=0;y<=h;y++)for(let x=0;x<=w;x++){const i=y*nx+x,px=x*pitchX-widthMm/2,py=heightMm/2-y*pitchY,o=i*3;positions[o]=px;positions[o+1]=py;positions[o+2]=tops[i]!;positions[o+points*3]=px;positions[o+points*3+1]=py;positions[o+points*3+2]=0;}
   const faces:number[]=[]; const side=(a:number,b:number)=>faces.push(a+points,b+points,b,a+points,b,a);
   let volume=0;
@@ -96,7 +96,7 @@ export function makeMedalMesh(src: RasterSource, config: MedalSettings): Printab
     const circle=inside(x,y),art=occupied[y*w+x]===1, keep=circle; if(!keep)continue;
     const p=y*nx+x,q=p+1,r=p+nx,s=r+1; faces.push(p,q,s,p,s,r,p+points,s+points,q+points,p+points,r+points,s+points);
     if(!inside(x,y-1))side(p,q);if(!inside(x+1,y))side(q,s);if(!inside(x,y+1))side(s,r);if(!inside(x-1,y))side(r,p);
-    if(art){const z=tops[p]!+base;tops[p]=Math.max(tops[p]!,z);tops[q]=Math.max(tops[q]!,z);tops[r]=Math.max(tops[r]!,z);tops[s]=Math.max(tops[s]!,z);}
+    if(art){const z=base+relief;tops[p]=Math.max(tops[p]!,z);tops[q]=Math.max(tops[q]!,z);tops[r]=Math.max(tops[r]!,z);tops[s]=Math.max(tops[s]!,z);}
     volume+=(base+(art?relief:0))*pitchX*pitchY;
   }
   // Write adjusted relief heights back to the exported vertex buffer.
