@@ -27,6 +27,17 @@ describe("Imagem para impressão 3D", () => {
     expect(verifyClosed(mesh).nonManifoldEdges).toBe(0);
     expect(mesh.triangles).toBeGreaterThan(0);
   });
+  it("permite largura e altura física independentes em milímetros", () => {
+    const mesh = makePrintableMesh(source, {
+      ...imageDefaults,
+      widthMm: 60,
+      targetHeightMm: 35,
+      resolution: 48,
+    });
+    expect(mesh.widthMm).toBe(60);
+    expect(mesh.heightMm).toBe(35);
+    expect(verifyClosed(mesh).closed).toBe(true);
+  });
   it("gera STL binário com contagem de triângulos correta", async () => {
     const mesh = makePrintableMesh(source, imageDefaults);
     const bytes = await stlBinary(mesh).arrayBuffer();
