@@ -279,7 +279,7 @@ export function buildModel(config: ModelConfig) {
       (front ? -width * scale / 2 : width * scale / 2) + relative[0] * radius + (config.textOffsetX ?? 0),
       (lines.length > 1 ? (i === 0 ? radius * 0.08 : -radius * 0.25) : -radius * 0.07)
         + relative[1] * radius + (config.textOffsetY ?? 0),
-      front ? config.thickness + 0.2 : -0.2,
+      front ? config.thickness - 0.25 : 0.25,
     );
     group.add(mesh);
   });
