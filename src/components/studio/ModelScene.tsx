@@ -42,6 +42,14 @@ export default function ModelScene({
     element.appendChild(renderer.domElement);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    // Blender-like navigation: middle drag orbits, Shift+middle drag pans,
+    // right drag pans, and the wheel zooms. Left click stays free for selection.
+    controls.mouseButtons = {
+      LEFT: null as unknown as THREE.MOUSE,
+      MIDDLE: THREE.MOUSE.ROTATE,
+      RIGHT: THREE.MOUSE.PAN,
+    };
+    controls.enableZoom = true;
     controls.target.set(0, 5, 0);
     controls.minDistance = 80;
     controls.maxDistance = 5000;
@@ -82,7 +90,15 @@ export default function ModelScene({
     sceneRef.current = { scene, camera, controls, transform, model: null };
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
+    const setMiddleMouseMode = (event: PointerEvent) => {
+      if (event.button === 1) {
+        controls.mouseButtons.MIDDLE = event.shiftKey ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
+      }
+    };
+    // Run before OrbitControls sees the event, including when Shift is held.
+    renderer.domElement.addEventListener("pointerdown", setMiddleMouseMode, true);
     const selectModel = (event: PointerEvent) => {
+      if (event.button !== 0 || transform.axis !== null) return;
       const current = sceneRef.current;
       if (!current?.model || !controls.enabled) return;
       const rect = renderer.domElement.getBoundingClientRect();
@@ -127,6 +143,7 @@ export default function ModelScene({
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      renderer.domElement.removeEventListener("pointerdown", setMiddleMouseMode, true);
       renderer.domElement.removeEventListener("pointerdown", selectModel);
       window.removeEventListener("keydown", changeTransformMode);
       transform.detach();
@@ -198,6 +215,6 @@ export default function ModelScene({
     controls.update();
   }, [view, zoom, reset, importedGeometry]);
   return (
-    <div className="scene-container" ref={host} aria-label="Cena 3D: clique para selecionar; G move, R gira, S escala; Escape desmarca" />
+    <div className="scene-container" ref={host} aria-label="Cena 3D: clique esquerdo seleciona; botão do meio gira; Shift e botão do meio deslocam; roda aproxima; G move, R gira, S escala" />
   );
 }
