@@ -905,6 +905,45 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   <span className="count">{shapes.length} formas</span>
                 </div>
                 {library}
+                <section className="px-3 py-3 border-t" aria-label="Modelos rápidos de chaveiro">
+                  <p className="text-sm font-semibold mb-2">Criador de chaveiros</p>
+                  <p className="text-xs text-muted-foreground mb-2">Escolha uma base com argola e personalize o nome e as medidas no painel.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      { label: "Redondo", shape: "circle", diameter: 45 },
+                      { label: "Coração", shape: "heart", diameter: 50 },
+                      { label: "Retangular", shape: "rectangle", diameter: 55 },
+                    ] as const).map((preset) => (
+                      <Button
+                        key={preset.shape}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setImported((old) => {
+                            old?.geometry.dispose();
+                            return null;
+                          });
+                          setUndoGeometry((old) => {
+                            old?.dispose();
+                            return null;
+                          });
+                          setConfig((old) => ({
+                            ...old,
+                            shape: preset.shape,
+                            diameter: preset.diameter,
+                            thickness: 3,
+                            textHeight: 1.2,
+                            ring: true,
+                            border: true,
+                          }));
+                          notify(`Chaveiro ${preset.label.toLowerCase()} carregado. Edite nome e medidas.`);
+                        }}
+                      >
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
+                </section>
                 <div className="library-footer">
                   <Layers size={12} />
                   Feitas para dar vida às suas ideias
@@ -1094,6 +1133,40 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                         <span>Até 22 caracteres</span>
                         <span>{config.name.length}/22</span>
                       </div>
+                      <label className="flex items-center gap-2 mt-3 text-sm">
+                        <input type="checkbox" checked={config.showText !== false}
+                          onChange={(e) => update("showText", e.target.checked)} />
+                        Adicionar texto ao chaveiro
+                      </label>
+                      {config.showText !== false && (
+                        <div className="grid gap-2 mt-3">
+                          <label className="text-sm" htmlFor="keychain-text-placement">Posição do texto</label>
+                          <select id="keychain-text-placement" className="text-input"
+                            value={config.textPlacement ?? "center"}
+                            onChange={(e) => update("textPlacement", e.target.value as NonNullable<ModelConfig["textPlacement"]>)}>
+                            <option value="center">Meio</option>
+                            <option value="top">Em cima</option>
+                            <option value="bottom">Embaixo</option>
+                            <option value="left">Esquerda</option>
+                            <option value="right">Direita</option>
+                          </select>
+                          <label className="text-sm" htmlFor="keychain-text-side">Face da peça</label>
+                          <select id="keychain-text-side" className="text-input"
+                            value={config.textSide ?? "front"}
+                            onChange={(e) => update("textSide", e.target.value as "front" | "back")}>
+                            <option value="front">Lado de fora (frente)</option>
+                            <option value="back">Lado de dentro (verso)</option>
+                          </select>
+                          <label className="text-sm" htmlFor="keychain-text-offset-x">Deslocar horizontalmente (mm)</label>
+                          <input id="keychain-text-offset-x" type="number" className="text-input" step="0.5"
+                            value={config.textOffsetX ?? 0}
+                            onChange={(e) => update("textOffsetX", Number(e.target.value))} />
+                          <label className="text-sm" htmlFor="keychain-text-offset-y">Deslocar verticalmente (mm)</label>
+                          <input id="keychain-text-offset-y" type="number" className="text-input" step="0.5"
+                            value={config.textOffsetY ?? 0}
+                            onChange={(e) => update("textOffsetY", Number(e.target.value))} />
+                        </div>
+                      )}
                     </div>
                     <div className="property-section">
                       <div className="section-label">
