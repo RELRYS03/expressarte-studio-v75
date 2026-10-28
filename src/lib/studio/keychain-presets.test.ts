@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import * as THREE from "three";
 import { STLExporter } from "three/examples/jsm/exporters/STLExporter.js";
 import { buildModel, defaultConfig, disposeModel, type ModelConfig } from "./model";
 
@@ -10,6 +11,31 @@ const presets = [
 
 describe("criador de chaveiros: geração e exportação", () => {
   for (const preset of presets) {
+    it(`posiciona a argola junto ao contorno do chaveiro ${preset.name}`, () => {
+      const model = buildModel({
+        ...defaultConfig,
+        name: "TESTE",
+        shape: preset.shape,
+        diameter: preset.diameter,
+        ring: true,
+        border: false,
+      });
+      try {
+        const base = model.children[0] as THREE.Mesh;
+        const ring = model.children[1] as THREE.Mesh;
+        const connector = model.children[2] as THREE.Mesh;
+        expect(ring.geometry).toBeInstanceOf(THREE.TorusGeometry);
+        expect(connector.geometry).toBeInstanceOf(THREE.BoxGeometry);
+        expect(new THREE.Box3().setFromObject(base).intersectsBox(new THREE.Box3().setFromObject(connector))).toBe(true);
+        expect(new THREE.Box3().setFromObject(ring).intersectsBox(new THREE.Box3().setFromObject(connector))).toBe(true);
+        if (preset.shape === "rectangle") {
+          expect(connector.position.y).toBeCloseTo((preset.diameter / 2) * 0.65, 1);
+        }
+      } finally {
+        disposeModel(model);
+      }
+    });
+
     it(`gera STL binário para chaveiro ${preset.name}`, () => {
       const config: ModelConfig = {
         ...defaultConfig,
