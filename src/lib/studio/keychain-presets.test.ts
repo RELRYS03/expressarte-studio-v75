@@ -10,6 +10,24 @@ const presets = [
 ] as const;
 
 describe("criador de chaveiros: geração e exportação", () => {
+  it("permite ocultar texto ou posicioná-lo na frente e no verso", () => {
+    const without = buildModel({ ...defaultConfig, shape: "circle", ring: false, border: false, showText: false });
+    const front = buildModel({ ...defaultConfig, shape: "circle", ring: false, border: false, name: "ANA", textSide: "front", textPlacement: "top" });
+    const back = buildModel({ ...defaultConfig, shape: "circle", ring: false, border: false, name: "ANA", textSide: "back", textPlacement: "bottom" });
+    try {
+      expect(without.children).toHaveLength(1);
+      expect(front.children).toHaveLength(2);
+      expect(back.children).toHaveLength(2);
+      expect((front.children[1] as THREE.Mesh).position.y).toBeGreaterThan((back.children[1] as THREE.Mesh).position.y);
+      expect((front.children[1] as THREE.Mesh).position.z).toBeGreaterThan(0);
+      expect((back.children[1] as THREE.Mesh).position.z).toBeLessThan(0);
+    } finally {
+      disposeModel(without);
+      disposeModel(front);
+      disposeModel(back);
+    }
+  });
+
   for (const preset of presets) {
     it(`posiciona a argola junto ao contorno do chaveiro ${preset.name}`, () => {
       const model = buildModel({
