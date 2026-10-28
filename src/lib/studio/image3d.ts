@@ -3,6 +3,7 @@ export type ImageMode = "relevo" | "litofania" | "silhueta";
 export type ImageSettings = {
   mode: ImageMode;
   widthMm: number;
+  targetHeightMm?: number; // 0/undefined = preserve source aspect ratio
   resolution: number;
   baseMm: number;
   heightMm: number;
@@ -87,7 +88,7 @@ export function makeMedalMesh(src: RasterSource, config: MedalSettings): Printab
     occupied[y * w + x] = alpha > 32 && lumin < threshold ? 1 : 0;
   }
   const inside = (x: number,y: number) => { if (x < 0 || y < 0 || x >= w || y >= h) return false; const px=(x+.5)/w*2-1, py=(y+.5)/h*2-1; return px*px+py*py < 1; };
-  for(let y=0;y<=h;y++) for(let x=0;x<=w;x++) { const px=x/w*2-1,py=y/h*2-1; tops[y*nx+x]=base+(px*px+py*py<=Math.max(0,1-border/Math.max(widthMm,heightMm)*2)?relief:0); }
+  for(let y=0;y<=h;y++) for(let x=0;x<=w;x++) { const px=x/w*2-1,py=y/h*2-1; tops[y*nx+x]=base+(px*px+py*py>=Math.max(0,1-border/Math.max(widthMm,heightMm)*2)&&px*px+py*py<=1?relief*0.5:0); }
   const positions=new Float32Array(points*2*3); for(let y=0;y<=h;y++)for(let x=0;x<=w;x++){const i=y*nx+x,px=x*pitchX-widthMm/2,py=heightMm/2-y*pitchY,o=i*3;positions[o]=px;positions[o+1]=py;positions[o+2]=tops[i]!;positions[o+points*3]=px;positions[o+points*3+1]=py;positions[o+points*3+2]=0;}
   const faces:number[]=[]; const side=(a:number,b:number)=>faces.push(a+points,b+points,b,a+points,b,a);
   let volume=0;
@@ -95,9 +96,12 @@ export function makeMedalMesh(src: RasterSource, config: MedalSettings): Printab
     const circle=inside(x,y),art=occupied[y*w+x]===1, keep=circle; if(!keep)continue;
     const p=y*nx+x,q=p+1,r=p+nx,s=r+1; faces.push(p,q,s,p,s,r,p+points,s+points,q+points,p+points,r+points,s+points);
     if(!inside(x,y-1))side(p,q);if(!inside(x+1,y))side(q,s);if(!inside(x,y+1))side(s,r);if(!inside(x-1,y))side(r,p);
-    if(art){const z=tops[p]!+base;tops[p]=Math.max(tops[p]!,z);tops[q]=Math.max(tops[q]!,z);tops[r]=Math.max(tops[r]!,z);tops[s]=Math.max(tops[s]!,z);}
+    if(art){const z=base+relief;tops[p]=Math.max(tops[p]!,z);tops[q]=Math.max(tops[q]!,z);tops[r]=Math.max(tops[r]!,z);tops[s]=Math.max(tops[s]!,z);}
     volume+=(base+(art?relief:0))*pitchX*pitchY;
   }
+  // Write adjusted relief heights back to the exported vertex buffer.
+  // Previously, positions were populated before the artwork modified tops.
+  for (let i = 0; i < points; i++) positions[i * 3 + 2] = tops[i]!;
   return {positions,indices:new Uint32Array(faces),widthMm,heightMm,depthMm:base+relief,triangles:faces.length/3,volumeMm3:volume,regions:1,warnings:["Medalha 2,5D: as cores do SVG serão representadas como paleta/material no 3MF; confira a atribuição de filamentos no fatiador."]};
 }
 
@@ -143,7 +147,9 @@ export function makePrintableMesh(src: RasterSource, settings: ImageSettings): P
   const longest = clampInt(settings.resolution, 24, 192);
   const w = src.width >= src.height ? longest : Math.max(2, Math.round(longest * src.width / src.height));
   const h = src.height >= src.width ? longest : Math.max(2, Math.round(longest * src.height / src.width));
-  const heightMm = widthMm * h / w;
+  const heightMm = settings.targetHeightMm && settings.targetHeightMm > 0
+    ? clamp(settings.targetHeightMm, 10, 240)
+    : widthMm * h / w;
   const pitchX = widthMm / w, pitchY = heightMm / h;
   const minMm = clamp(settings.minMm, 0.6, 9);
   const maxMm = clamp(settings.maxMm, minMm + 0.2, 12);
@@ -162,7 +168,7 @@ export function makePrintableMesh(src: RasterSource, settings: ImageSettings): P
     const sy = ((h - y - 0.5) * src.height / h) - 0.5;
     const sample = pixel(src, sx, sy, contrast, settings.invert);
     const at = y * w + x;
-    dark[at] = hasAlpha && !settings.invert ? Math.max(sample.darkness, sample.alpha) : sample.darkness;
+    dark[at] = hasAlpha && !settings.invert ? sample.darkness * sample.alpha : sample.darkness;
     // Para imagens recortadas, a transparência define o contorno.
     mask[at] = (hasAlpha && !settings.invert ? sample.alpha > 0.5 : sample.darkness >= (1 - threshold)) ? 1 : 0;
     selected += mask[at]!;

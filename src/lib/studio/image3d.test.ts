@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { imageDefaults, makePrintableMesh, verifyClosed, type RasterSource } from "./image3d";
+import { imageDefaults, makeMedalMesh, makePrintableMesh, verifyClosed, type RasterSource } from "./image3d";
 import { stlBinary, threeMfFile } from "./print-exports";
 
 function raster(fn: (x: number, y: number) => boolean): RasterSource {
@@ -27,6 +27,37 @@ describe("Imagem para impressão 3D", () => {
     expect(verifyClosed(mesh).nonManifoldEdges).toBe(0);
     expect(mesh.triangles).toBeGreaterThan(0);
   });
+  it("permite largura e altura física independentes em milímetros", () => {
+    const mesh = makePrintableMesh(source, {
+      ...imageDefaults,
+      widthMm: 60,
+      targetHeightMm: 35,
+      resolution: 48,
+    });
+    expect(mesh.widthMm).toBe(60);
+    expect(mesh.heightMm).toBe(35);
+    expect(verifyClosed(mesh).closed).toBe(true);
+  });
+  it("registra relevo da imagem na geometria da medalha sem exceder a espessura", () => {
+    const rgba = new Uint8ClampedArray(24 * 24 * 4);
+    for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) {
+      const i = (y * 24 + x) * 4;
+      const drawing = x >= 5 && x <= 11 && y >= 9 && y <= 15;
+      rgba[i] = rgba[i + 1] = rgba[i + 2] = drawing ? 0 : 255;
+      rgba[i + 3] = 255;
+    }
+    const medal = makeMedalMesh(
+      { width: 24, height: 24, rgba, name: "referencia-medalha.png" },
+      { widthMm: 50, baseMm: 2, reliefMm: 1, borderMm: 1, resolution: 48, threshold: 140 },
+    );
+    const row = 25;
+    const vertexZ = (x: number) => medal.positions[(row * 49 + x) * 3 + 2]!;
+    expect(vertexZ(14)).toBeGreaterThan(vertexZ(32));
+    const topVertices = medal.positions.length / 6;
+    for (let i = 0; i < topVertices; i++) {
+      expect(medal.positions[i * 3 + 2]).toBeLessThanOrEqual(medal.depthMm + 0.0001);
+    }
+  });
   it("gera STL binário com contagem de triângulos correta", async () => {
     const mesh = makePrintableMesh(source, imageDefaults);
     const bytes = await stlBinary(mesh).arrayBuffer();
@@ -39,4 +70,27 @@ describe("Imagem para impressão 3D", () => {
     expect(new DataView(buffer).getUint32(0, true)).toBe(0x04034b50);
     expect(buffer.byteLength).toBeGreaterThan(1000);
   });
+  it("preserva tons diferentes em PNG transparente usado como referência de chaveiro", () => {
+    const rgba = new Uint8ClampedArray(24 * 24 * 4);
+    for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) {
+      const i = (y * 24 + x) * 4;
+      // Two visible regions of different luminance on transparent background.
+      const visible = x >= 2 && x < 22 && y >= 2 && y < 22;
+      const shade = x < 12 ? 30 : 200;
+      rgba[i] = shade;
+      rgba[i + 1] = shade;
+      rgba[i + 2] = shade;
+      rgba[i + 3] = visible ? 255 : 0;
+    }
+    const mesh = makePrintableMesh(
+      { name: "referencia-chaveiro.png", width: 24, height: 24, rgba },
+      { ...imageDefaults, widthMm: 48, resolution: 24, mode: "relevo" },
+    );
+    const topZ = (x: number, y: number) => mesh.positions[(y * 25 + x) * 3 + 2]!;
+    expect(topZ(6, 12)).toBeGreaterThan(topZ(18, 12) + 0.5);
+    expect(mesh.widthMm).toBe(48);
+    expect(mesh.heightMm).toBe(48);
+    expect(verifyClosed(mesh).closed).toBe(true);
+  });
+
 });
