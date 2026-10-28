@@ -18,8 +18,14 @@ export type ShapeKind =
   | "flower"
   | "cross"
   | "arch";
+export type TextPlacement = "center" | "top" | "bottom" | "left" | "right";
 export type ModelConfig = {
   name: string;
+  textPlacement?: TextPlacement;
+  textSide?: "front" | "back";
+  textOffsetX?: number;
+  textOffsetY?: number;
+  showText?: boolean;
   shape: ShapeKind;
   diameter: number;
   thickness: number;
@@ -30,6 +36,11 @@ export type ModelConfig = {
 };
 export const defaultConfig: ModelConfig = {
   name: "EXPRESS ARTE",
+  textPlacement: "center",
+  textSide: "front",
+  showText: true,
+  textOffsetX: 0,
+  textOffsetY: 0,
   shape: "circle",
   diameter: 80,
   thickness: 3,
@@ -227,7 +238,7 @@ export function buildModel(config: ModelConfig) {
     connector.position.set(0, topY, config.thickness * 0.5);
     group.add(connector);
   }
-  const words = config.name.trim().split(/\s+/);
+  const words = config.showText === false ? [] : config.name.trim().split(/\s+/);
   const lines =
     words.length > 1
       ? [
@@ -254,10 +265,21 @@ export function buildModel(config: ModelConfig) {
     const mesh = new THREE.Mesh(text, baseMaterial);
     const scale = Math.min(1, (radius * 1.35) / width);
     mesh.scale.setScalar(scale);
+    const placement = config.textPlacement ?? "center";
+    const relative = {
+      center: [0, 0],
+      top: [0, 0.38],
+      bottom: [0, -0.38],
+      left: [-0.34, 0],
+      right: [0.34, 0],
+    }[placement];
+    const front = config.textSide !== "back";
+    if (!front) mesh.rotation.y = Math.PI;
     mesh.position.set(
-      (-width * scale) / 2,
-      lines.length > 1 ? (i === 0 ? radius * 0.08 : -radius * 0.25) : -radius * 0.07,
-      config.thickness + 0.2,
+      (front ? -width * scale / 2 : width * scale / 2) + relative[0] * radius + (config.textOffsetX ?? 0),
+      (lines.length > 1 ? (i === 0 ? radius * 0.08 : -radius * 0.25) : -radius * 0.07)
+        + relative[1] * radius + (config.textOffsetY ?? 0),
+      front ? config.thickness + 0.2 : -0.2,
     );
     group.add(mesh);
   });
