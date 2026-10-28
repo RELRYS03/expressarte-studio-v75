@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { imageDefaults, makePrintableMesh, verifyClosed, type RasterSource } from "./image3d";
+import { imageDefaults, makeMedalMesh, makePrintableMesh, verifyClosed, type RasterSource } from "./image3d";
 import { stlBinary, threeMfFile } from "./print-exports";
 
 function raster(fn: (x: number, y: number) => boolean): RasterSource {
@@ -37,6 +37,26 @@ describe("Imagem para impressão 3D", () => {
     expect(mesh.widthMm).toBe(60);
     expect(mesh.heightMm).toBe(35);
     expect(verifyClosed(mesh).closed).toBe(true);
+  });
+  it("registra relevo da imagem na geometria da medalha sem exceder a espessura", () => {
+    const rgba = new Uint8ClampedArray(24 * 24 * 4);
+    for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) {
+      const i = (y * 24 + x) * 4;
+      const drawing = x >= 5 && x <= 11 && y >= 9 && y <= 15;
+      rgba[i] = rgba[i + 1] = rgba[i + 2] = drawing ? 0 : 255;
+      rgba[i + 3] = 255;
+    }
+    const medal = makeMedalMesh(
+      { width: 24, height: 24, rgba, name: "referencia-medalha.png" },
+      { widthMm: 50, baseMm: 2, reliefMm: 1, borderMm: 1, resolution: 48, threshold: 140 },
+    );
+    const row = 25;
+    const vertexZ = (x: number) => medal.positions[(row * 49 + x) * 3 + 2]!;
+    expect(vertexZ(14)).toBeGreaterThan(vertexZ(32));
+    const topVertices = medal.positions.length / 6;
+    for (let i = 0; i < topVertices; i++) {
+      expect(medal.positions[i * 3 + 2]).toBeLessThanOrEqual(medal.depthMm + 0.0001);
+    }
   });
   it("gera STL binário com contagem de triângulos correta", async () => {
     const mesh = makePrintableMesh(source, imageDefaults);
