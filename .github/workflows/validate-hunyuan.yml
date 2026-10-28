@@ -5,6 +5,11 @@ on:
       - 'src/lib/hunyuan3d-client.ts'
       - 'src/lib/hunyuan3d-client.test.ts'
       - '.github/workflows/validate-hunyuan.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'vite.config.ts'
+      - 'vitest.config.*'
   push:
     branches: [feature/hunyuan3d-adapter]
 permissions:
@@ -12,11 +17,13 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - run: npm ci
-      - run: npm test -- --run src/lib/hunyuan3d-client.test.ts
+      - run: npm test
+      - run: npx tsc --noEmit
       - run: npm run build
