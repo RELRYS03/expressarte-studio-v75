@@ -162,7 +162,7 @@ export function makePrintableMesh(src: RasterSource, settings: ImageSettings): P
     const sy = ((h - y - 0.5) * src.height / h) - 0.5;
     const sample = pixel(src, sx, sy, contrast, settings.invert);
     const at = y * w + x;
-    dark[at] = hasAlpha && !settings.invert ? Math.max(sample.darkness, sample.alpha) : sample.darkness;
+    dark[at] = hasAlpha && !settings.invert ? sample.darkness * sample.alpha : sample.darkness;
     // Para imagens recortadas, a transparência define o contorno.
     mask[at] = (hasAlpha && !settings.invert ? sample.alpha > 0.5 : sample.darkness >= (1 - threshold)) ? 1 : 0;
     selected += mask[at]!;
