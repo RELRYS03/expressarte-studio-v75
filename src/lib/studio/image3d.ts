@@ -3,6 +3,7 @@ export type ImageMode = "relevo" | "litofania" | "silhueta";
 export type ImageSettings = {
   mode: ImageMode;
   widthMm: number;
+  targetHeightMm?: number; // 0/undefined = preserve source aspect ratio
   resolution: number;
   baseMm: number;
   heightMm: number;
@@ -143,7 +144,9 @@ export function makePrintableMesh(src: RasterSource, settings: ImageSettings): P
   const longest = clampInt(settings.resolution, 24, 192);
   const w = src.width >= src.height ? longest : Math.max(2, Math.round(longest * src.width / src.height));
   const h = src.height >= src.width ? longest : Math.max(2, Math.round(longest * src.height / src.width));
-  const heightMm = widthMm * h / w;
+  const heightMm = settings.targetHeightMm && settings.targetHeightMm > 0
+    ? clamp(settings.targetHeightMm, 10, 240)
+    : widthMm * h / w;
   const pitchX = widthMm / w, pitchY = heightMm / h;
   const minMm = clamp(settings.minMm, 0.6, 9);
   const maxMm = clamp(settings.maxMm, minMm + 0.2, 12);
