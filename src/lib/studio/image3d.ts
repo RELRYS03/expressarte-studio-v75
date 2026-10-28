@@ -99,6 +99,9 @@ export function makeMedalMesh(src: RasterSource, config: MedalSettings): Printab
     if(art){const z=tops[p]!+base;tops[p]=Math.max(tops[p]!,z);tops[q]=Math.max(tops[q]!,z);tops[r]=Math.max(tops[r]!,z);tops[s]=Math.max(tops[s]!,z);}
     volume+=(base+(art?relief:0))*pitchX*pitchY;
   }
+  // Write adjusted relief heights back to the exported vertex buffer.
+  // Previously, positions were populated before the artwork modified tops.
+  for (let i = 0; i < points; i++) positions[i * 3 + 2] = tops[i]!;
   return {positions,indices:new Uint32Array(faces),widthMm,heightMm,depthMm:base+relief,triangles:faces.length/3,volumeMm3:volume,regions:1,warnings:["Medalha 2,5D: as cores do SVG serão representadas como paleta/material no 3MF; confira a atribuição de filamentos no fatiador."]};
 }
 
