@@ -20,7 +20,9 @@ describe("criador de chaveiros: geração e exportação", () => {
       expect(back.children).toHaveLength(2);
       expect((front.children[1] as THREE.Mesh).position.y).toBeGreaterThan((back.children[1] as THREE.Mesh).position.y);
       expect((front.children[1] as THREE.Mesh).position.z).toBeGreaterThan(0);
-      expect((back.children[1] as THREE.Mesh).position.z).toBeLessThan(0);
+      expect((back.children[1] as THREE.Mesh).position.z).toBeGreaterThan(0);
+      expect((back.children[1] as THREE.Mesh).position.z).toBeLessThan(defaultConfig.thickness);
+      expect((front.children[1] as THREE.Mesh).position.z).toBeLessThan(defaultConfig.thickness);
     } finally {
       disposeModel(without);
       disposeModel(front);
