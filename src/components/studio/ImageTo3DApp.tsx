@@ -129,6 +129,7 @@ function validSettings(input: unknown): ImageSettings {
       ? p.mode!
       : first.mode,
     widthMm: num(p.widthMm, first.widthMm, 10, 240),
+    targetHeightMm: num(p.targetHeightMm, 0, 0, 240),
     resolution: num(p.resolution, first.resolution, 24, 192),
     baseMm: num(p.baseMm, first.baseMm, 0.6, 8),
     heightMm: num(p.heightMm, first.heightMm, 0.2, 15),
@@ -457,8 +458,8 @@ export default function ImageTo3DApp() {
               <span>para o mundo 3D.</span>
             </h1>
             <p>
-              Transforme fotos, desenhos e logos em peças prontas para visualizar e preparar para
-              impressão.
+              Transforme PNG ou JPEG em relevo 3D, ajuste largura, altura e espessura em milímetros,
+              confira a malha e exporte para o fatiador.
             </p>
             <div className="im3-generator-actions">
               <Button onClick={() => picker.current?.click()}>
@@ -1026,6 +1027,31 @@ export default function ImageTo3DApp() {
                       unit="mm"
                       onChange={(n) => update("widthMm", n)}
                     />
+                    <label className="im3-check">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(settings.targetHeightMm)}
+                        onChange={(event) =>
+                          update(
+                            "targetHeightMm",
+                            event.target.checked
+                              ? Math.max(10, Math.min(240, Math.round(settings.widthMm * (source ? source.height / source.width : 1))))
+                              : 0,
+                          )
+                        }
+                      />
+                      Ajustar altura independentemente da largura
+                    </label>
+                    {Boolean(settings.targetHeightMm) && (
+                      <NumberControl
+                        label="Altura da peça (Y)"
+                        value={settings.targetHeightMm ?? 0}
+                        min={10}
+                        max={240}
+                        unit="mm"
+                        onChange={(n) => update("targetHeightMm", n)}
+                      />
+                    )}
                     <NumberControl
                       label="Resolução de amostragem"
                       value={settings.resolution}
