@@ -905,6 +905,45 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   <span className="count">{shapes.length} formas</span>
                 </div>
                 {library}
+                <section className="px-3 py-3 border-t" aria-label="Modelos rápidos de chaveiro">
+                  <p className="text-sm font-semibold mb-2">Criador de chaveiros</p>
+                  <p className="text-xs text-muted-foreground mb-2">Escolha uma base com argola e personalize o nome e as medidas no painel.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      { label: "Redondo", shape: "circle", diameter: 45 },
+                      { label: "Coração", shape: "heart", diameter: 50 },
+                      { label: "Retangular", shape: "rectangle", diameter: 55 },
+                    ] as const).map((preset) => (
+                      <Button
+                        key={preset.shape}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setImported((old) => {
+                            old?.geometry.dispose();
+                            return null;
+                          });
+                          setUndoGeometry((old) => {
+                            old?.dispose();
+                            return null;
+                          });
+                          setConfig((old) => ({
+                            ...old,
+                            shape: preset.shape,
+                            diameter: preset.diameter,
+                            thickness: 3,
+                            textHeight: 1.2,
+                            ring: true,
+                            border: true,
+                          }));
+                          notify(`Chaveiro ${preset.label.toLowerCase()} carregado. Edite nome e medidas.`);
+                        }}
+                      >
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
+                </section>
                 <div className="library-footer">
                   <Layers size={12} />
                   Feitas para dar vida às suas ideias
