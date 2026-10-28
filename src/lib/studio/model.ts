@@ -216,11 +216,14 @@ export function buildModel(config: ModelConfig) {
     group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 256, 0.65, 8, true), baseMaterial));
   }
   if (config.ring) {
+    // The top of a rectangle, heart, etc. is not necessarily at `radius`.
+    // Place the connector against the actual outline instead of assuming a circle.
+    const topY = Math.max(...outline(config.shape, radius).getPoints(128).map((p) => p.y));
     const ring = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.13, 1.9, 12, 64), baseMaterial);
-    ring.position.set(0, radius + radius * 0.09, config.thickness * 0.5);
+    ring.position.set(0, topY + radius * 0.09, config.thickness * 0.5);
     group.add(ring);
     const connector = new THREE.Mesh(new THREE.BoxGeometry(4, 7, config.thickness), baseMaterial);
-    connector.position.set(0, radius, config.thickness * 0.5);
+    connector.position.set(0, topY, config.thickness * 0.5);
     group.add(connector);
   }
   const words = config.name.trim().split(/\s+/);
