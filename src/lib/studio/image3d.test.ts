@@ -39,4 +39,27 @@ describe("Imagem para impressão 3D", () => {
     expect(new DataView(buffer).getUint32(0, true)).toBe(0x04034b50);
     expect(buffer.byteLength).toBeGreaterThan(1000);
   });
+  it("preserva tons diferentes em PNG transparente usado como referência de chaveiro", () => {
+    const rgba = new Uint8ClampedArray(24 * 24 * 4);
+    for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) {
+      const i = (y * 24 + x) * 4;
+      // Two visible regions of different luminance on transparent background.
+      const visible = x >= 2 && x < 22 && y >= 2 && y < 22;
+      const shade = x < 12 ? 30 : 200;
+      rgba[i] = shade;
+      rgba[i + 1] = shade;
+      rgba[i + 2] = shade;
+      rgba[i + 3] = visible ? 255 : 0;
+    }
+    const mesh = makePrintableMesh(
+      { name: "referencia-chaveiro.png", width: 24, height: 24, rgba },
+      { ...imageDefaults, widthMm: 48, resolution: 24, mode: "relevo" },
+    );
+    const topZ = (x: number, y: number) => mesh.positions[(y * 25 + x) * 3 + 2]!;
+    expect(topZ(6, 12)).toBeGreaterThan(topZ(18, 12) + 0.5);
+    expect(mesh.widthMm).toBe(48);
+    expect(mesh.heightMm).toBe(48);
+    expect(verifyClosed(mesh).closed).toBe(true);
+  });
+
 });
