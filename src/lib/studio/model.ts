@@ -218,7 +218,8 @@ export function buildModel(config: ModelConfig) {
   if (config.ring) {
     // The top of a rectangle, heart, etc. is not necessarily at `radius`.
     // Place the connector against the actual outline instead of assuming a circle.
-    const topY = Math.max(...outline(config.shape, radius).getPoints(128).map((p) => p.y));
+    const centerPoints = outline(config.shape, radius).getPoints(128).filter((p) => Math.abs(p.x) <= radius * 0.05);
+    const topY = Math.max(...centerPoints.map((p) => p.y));
     const ring = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.13, 1.9, 12, 64), baseMaterial);
     ring.position.set(0, topY + radius * 0.09, config.thickness * 0.5);
     group.add(ring);
