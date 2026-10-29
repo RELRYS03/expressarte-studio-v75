@@ -1,0 +1,53 @@
+name: Research 3D editor sources
+on:
+  push:
+    branches: [research/editor-3d-sources]
+    paths: ['.github/workflows/research-3d-editors.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  clone-editor-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Clone Tau (Apache-2.0)
+        uses: actions/checkout@v4
+        with:
+          repository: taucad/tau
+          path: editors/tau
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Clone SketchForge (AGPL-3.0-only, research only)
+        uses: actions/checkout@v4
+        with:
+          repository: Formsmith746/SketchForge-3D
+          path: editors/sketchforge
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Clone Chili3D (AGPL-3.0, research only)
+        uses: actions/checkout@v4
+        with:
+          repository: xiangechen/chili3d
+          path: editors/chili3d
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Record versions and remove Git internals
+        shell: bash
+        run: |
+          mkdir -p manifest
+          for p in tau sketchforge chili3d; do
+            git -C "editors/$p" rev-parse HEAD > "manifest/$p.commit.txt"
+            rm -rf "editors/$p/.git"
+          done
+          printf '%s\n' 'Tau: Apache-2.0; evaluate notices and transitive dependencies.' 'SketchForge: AGPL-3.0-only; research only.' 'Chili3D: AGPL-3.0; research only.' > manifest/LICENSE-NOTES.txt
+      - name: Upload isolated sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: expressarte-editor-source-research
+          path: |
+            editors/
+            manifest/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
