@@ -479,6 +479,11 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const booleanStlRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
+  // User edits in the viewport are exported, excluding the display-only base orientation.
+  const viewportTransformRef = useRef<number[] | null>(null);
+  const onModelTransform = useCallback((matrix: number[] | null) => {
+    viewportTransformRef.current = matrix;
+  }, []);
   const update = <K extends keyof ModelConfig>(key: K, value: ModelConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: value }));
   const notify = (text: string) => {
@@ -1249,7 +1254,12 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   const input = e.currentTarget;
                   const file = input.files?.[0];
                   if (!file) return;
-                  try {
+                  if (viewportTransformRef.current) {
+         const THREE = await import("three");
+         model.applyMatrix4(new THREE.Matrix4().fromArray(viewportTransformRef.current));
+         model.updateMatrixWorld(true);
+       }
+       try {
                     if (file.size > 1024 * 1024) throw new Error("Arquivo muito grande");
                     const data: unknown = JSON.parse(await file.text());
                     const importedConfig = coerceConfig(data);
