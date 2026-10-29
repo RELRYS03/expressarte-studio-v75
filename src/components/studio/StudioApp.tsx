@@ -1,3 +1,5 @@
+import { editSolid, solidPositions } from "@/lib/studio/solid-mesh-client";
+import type { SolidOperation } from "@/lib/studio/solid-mesh";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
 import { Link, ClientOnly } from "@tanstack/react-router";
@@ -172,11 +174,15 @@ function MeshEditPanel({
   onMerge,
   onBooleanUnion,
   onBlenderCut,
+  onSolidCut,
+  onSolidUnion,
   notify,
 }: {
   name: string;
   geometry: BufferGeometry;
   onCommit: (next: BufferGeometry, message: string) => void;
+  onSolidUnion: () => void;
+  onSolidCut: (axis: MeshAxis, offset: number, keepPositive: boolean) => void;
   onMerge: () => void;
   onBooleanUnion: () => void;
   onBlenderCut: (axis: MeshAxis, offset: number, keepPositive: boolean) => void;
@@ -430,8 +436,12 @@ function MeshEditPanel({
         >
           <Scissors size={14} /> Corte fechado com Blender
         </Button>
+        <Button className="w-full" size="sm" onClick={() => onSolidCut(axis, cutPosition, keepPositive)}>
+          Corte fechado no navegador
+        </Button>
+        <p className="mesh-caution">Operações locais com Manifold; exigem sólidos fechados. Não reparam furos.</p>
         <p className="mesh-caution">
-          O corte remove a outra metade e deixa a borda aberta. Confira e repare no fatiador antes
+          Aplicar corte remove a outra metade e deixa a borda aberta. Confira e repare no fatiador antes
           de imprimir.
         </p>
       </section>
@@ -442,11 +452,14 @@ function MeshEditPanel({
         <Button className="w-full" variant="outline" size="sm" onClick={onMerge}>
           Adicionar outro STL como corpo
         </Button>
+        <Button className="w-full" size="sm" onClick={onSolidUnion}>
+          União sólida no navegador
+        </Button>
         <Button className="w-full" size="sm" disabled={!bridgeAvailable} onClick={onBooleanUnion}>
           União booleana com Blender
         </Button>
         <p className="mesh-caution">
-          Agrupa corpos no mesmo arquivo; não funde sobreposições numa única superfície sólida.
+          Adicionar como corpo apenas agrupa. A união sólida funde sobreposições, usa a posição original do segundo STL e exige peças fechadas.
         </p>
       </section>
     </div>
@@ -464,6 +477,8 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const [dialog, setDialog] = useState<"export" | "blender" | "help" | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [solidBusy, setSolidBusy] = useState(false);
+  const solidLock = useRef(false);
   const [mesh, setMesh] = useState<{
     name: string;
     triangles: number;
@@ -476,6 +491,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const [undoGeometry, setUndoGeometry] = useState<BufferGeometry | null>(null);
   const importStlRef = useRef<HTMLInputElement>(null);
   const mergeStlRef = useRef<HTMLInputElement>(null);
+  const solidStlRef = useRef<HTMLInputElement>(null);
   const booleanStlRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -616,6 +632,27 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     } catch {
       notify("Não foi possível combinar esse STL. Confira se a malha é válida.");
     }
+  };
+  const runSolidEdit = async (operation: SolidOperation | { kind: "union-file"; file: File }) => {
+    if (!imported || busy || solidLock.current) return;
+    solidLock.current = true;
+    setSolidBusy(true);
+    setBusy(true);
+    let part: BufferGeometry | undefined;
+    try {
+      let request: SolidOperation;
+      if (operation.kind === "union-file") {
+        if (!operation.file.name.toLowerCase().endsWith(".stl") || operation.file.size > 20 * 1024 * 1024)
+          throw new Error("Escolha um STL de até 20 MB.");
+        const { STLLoader } = await import("three/examples/jsm/loaders/STLLoader.js");
+        part = new STLLoader().parse(await operation.file.arrayBuffer());
+        request = { kind: "union", second: solidPositions(part) };
+      } else request = operation;
+      const result = await editSolid(solidPositions(imported.geometry), request);
+      commitMesh(result, request.kind === "cut" ? "Corte fechado aplicado. Confira antes de imprimir." : "União sólida aplicada. Confira antes de imprimir.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível processar a malha.");
+    } finally { part?.dispose(); solidLock.current = false; setSolidBusy(false); setBusy(false); }
   };
   const undoMesh = () => {
     if (!imported || !undoGeometry) return;
@@ -781,6 +818,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const pricing = calculatePricing(cost);
   return (
     <>
+    <div inert={solidBusy} style={{ display: "contents" }}>
       <header className="app-header">
         <Link to="/" className="brand">
           <svg className="brand-mark" viewBox="0 0 36 40" fill="none" aria-hidden="true">
@@ -878,6 +916,11 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   e.currentTarget.value = "";
                 }}
               />
+              <input type="file" accept=".stl" className="hidden" ref={solidStlRef} onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.currentTarget.value = "";
+                if (file) void runSolidEdit({ kind: "union-file", file });
+              }} />
               <Button variant="outline" onClick={() => importStlRef.current?.click()}>
                 <Upload /> Abrir STL
               </Button>
@@ -1062,10 +1105,13 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   )}
                 </div>
                 {imported ? (
+                  <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                   <MeshEditPanel
                     name={imported.name}
                     geometry={imported.geometry}
                     onCommit={commitMesh}
+                    onSolidUnion={() => solidStlRef.current?.click()}
+                    onSolidCut={(axis, offset, keepPositive) => void runSolidEdit({ kind: "cut", axis, offset, keepPositive })}
                     onMerge={() => mergeStlRef.current?.click()}
                     onBooleanUnion={() => booleanStlRef.current?.click()}
                     onBlenderCut={(axis, offset, keepPositive) =>
@@ -1073,6 +1119,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                     }
                     notify={notify}
                   />
+                  </fieldset>
                 ) : (
                   <>
                     <div className="property-section">
@@ -1550,6 +1597,8 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
           {notice}
         </div>
       )}
+    </div>
+    {solidBusy && <div className="dialog-backdrop" role="status" style={{ zIndex: 9999 }}><div className="dialog-card">Processando sólido… prazo máximo de 60 segundos.</div></div>}
     </>
   );
 }

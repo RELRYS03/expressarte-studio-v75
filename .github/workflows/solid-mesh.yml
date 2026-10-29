@@ -1,0 +1,29 @@
+name: Solid mesh validation
+on:
+  pull_request:
+  push:
+    branches: [feature/solid-mesh-tools]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx tsc --noEmit
+      - run: npm run build
+      - name: Package isolated Studio preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: expressarte-studio-solid-mesh-preview
+          path: .output/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 7
