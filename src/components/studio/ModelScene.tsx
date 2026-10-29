@@ -10,6 +10,7 @@ export default function ModelScene({
   zoom,
   reset,
   wireframe,
+  onModelTransform,
 }: {
   config: ModelConfig;
   importedGeometry: THREE.BufferGeometry | null;
@@ -17,6 +18,7 @@ export default function ModelScene({
   zoom: number;
   reset: number;
   wireframe: boolean;
+  onModelTransform: (matrix: number[] | null) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
@@ -25,6 +27,8 @@ export default function ModelScene({
     controls: OrbitControls;
     transform: TransformControls;
     model: THREE.Group | null;
+    baseline: THREE.Matrix4 | null;
+    centerTranslation: THREE.Matrix4 | null;
   }>(null);
   useEffect(() => {
     const element = host.current;
@@ -87,7 +91,18 @@ export default function ModelScene({
     const grid = new THREE.GridHelper(1000, 100, sceneColor("--grid"), sceneColor("--grid"));
     grid.position.y = -0.7;
     scene.add(grid);
-    sceneRef.current = { scene, camera, controls, transform, model: null };
+    sceneRef.current = { scene, camera, controls, transform, model: null, baseline: null, centerTranslation: null };
+    const captureTransform = () => {
+      const current = sceneRef.current;
+      if (!current?.model || !current.baseline) return;
+      current.model.updateMatrix();
+      const delta = current.baseline.clone().invert().multiply(current.model.matrix);
+      if (current.centerTranslation) {
+        delta.premultiply(current.centerTranslation.clone().invert()).multiply(current.centerTranslation);
+      }
+      onModelTransform(delta.elements.slice());
+    };
+    transform.addEventListener("objectChange", captureTransform);
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     const setMiddleMouseMode = (event: PointerEvent) => {
@@ -146,6 +161,7 @@ export default function ModelScene({
       renderer.domElement.removeEventListener("pointerdown", setMiddleMouseMode, true);
       renderer.domElement.removeEventListener("pointerdown", selectModel);
       window.removeEventListener("keydown", changeTransformMode);
+      transform.removeEventListener("objectChange", captureTransform);
       transform.detach();
       scene.remove(transformHelper);
       transform.dispose();
@@ -160,7 +176,7 @@ export default function ModelScene({
       renderer.domElement.remove();
       sceneRef.current = null;
     };
-  }, []);
+  }, [onModelTransform]);
   useEffect(() => {
     const current = sceneRef.current;
     if (!current) return;
@@ -170,11 +186,16 @@ export default function ModelScene({
       disposeModel(current.model);
     }
     const model = importedGeometry ? new THREE.Group() : buildModel(config);
+    let centerTranslation: THREE.Matrix4 | null = null;
     if (importedGeometry) {
       const geo = importedGeometry.clone();
       geo.computeBoundingBox();
       const box = geo.boundingBox;
-      if (box) geo.translate(-(box.max.x + box.min.x) / 2, -(box.max.y + box.min.y) / 2, -box.min.z);
+      if (box) {
+        const shift = new THREE.Vector3(-(box.max.x + box.min.x) / 2, -(box.max.y + box.min.y) / 2, -box.min.z);
+        geo.translate(shift.x, shift.y, shift.z);
+        centerTranslation = new THREE.Matrix4().makeTranslation(shift.x, shift.y, shift.z);
+      }
       const material = new THREE.MeshStandardMaterial({ color: sceneColor("--model-bronze"), metalness: 0.2, roughness: 0.65, side: THREE.DoubleSide });
       model.add(new THREE.Mesh(geo, material));
     }
@@ -189,9 +210,13 @@ export default function ModelScene({
         });
       }
     });
+    model.updateMatrix();
+    current.baseline = model.matrix.clone();
+    current.centerTranslation = centerTranslation;
     current.scene.add(model);
     current.model = model;
-  }, [config, wireframe, importedGeometry]);
+    onModelTransform(null);
+  }, [config, wireframe, importedGeometry, onModelTransform]);
   useEffect(() => {
     const current = sceneRef.current;
     if (!current) return;
