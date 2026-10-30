@@ -33,3 +33,10 @@
 
 ### Recursos sem esquecer
 Gerador de chaveiros, logos SVG, contorno automático, texto 3D, letras-caixa LED, letreiros, prévia ao vivo, gerenciador com backup, STL/3MF, orçamento/custos, academia de cursos próprios, comparação de filamentos, litofania/luminária, molduras, caixas/encaixes, suportes, edição STL avançada, multifilamento Bambu A1 Combo/AMS Lite, catálogo e pedidos.
+
+
+### Incremento em 30/10/2026: logo SVG sobre STL
+- Implementado em `StudioApp.tsx`: upload SVG separado, extrusão, centralização XY na face Z superior e união booleana via Worker Manifold.
+- `logo-placement.ts`: embute 0,25 mm do relevo na malha base; testes unitários cobrem centralização e profundidade insuficiente.
+- Riscos / limites: superfície superior precisa ser plana sob o logo; posicionamento não é drag-and-drop; não suporta selecionar faces curvas nem subtração de gravação.
+- **Sem validação de UI, fatiamento ou CI para este novo commit**; confirmar geometria fechada, normais e escala em dois STL reais antes de merge.
