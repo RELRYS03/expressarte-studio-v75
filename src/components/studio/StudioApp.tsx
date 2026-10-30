@@ -2,6 +2,7 @@ import { editSolid, solidPositions } from "@/lib/studio/solid-mesh-client";
 import { createStarterGeometry, type StarterPreset } from "@/lib/studio/starter-presets";
 import { geometryFromSvg } from "@/lib/studio/svg-geometry";
 import { placeRaisedLogo } from "@/lib/studio/logo-placement";
+import { createLedChannelPart } from "@/lib/studio/led-channel";
 import type { SolidOperation } from "@/lib/studio/solid-mesh";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
@@ -581,6 +582,26 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       setBusy(false);
     }
   };
+  const createLedPrototype = (part: "frame" | "lid") => {
+    if (busy || solidLock.current) return;
+    try {
+      const geometry = createLedChannelPart(part, {
+        width: starterWidth,
+        height: starterHeight,
+        depth: Math.max(5, starterThickness * 5),
+        wall: 2,
+      });
+      setUndoGeometry(old => { old?.dispose(); return null; });
+      setImported(old => {
+        old?.geometry.dispose();
+        return { name: `led-channel-${part}.stl`, geometry };
+      });
+      setView("3d"); setZoom(100); setReset(v => v + 1);
+      notify("Protótipo de canal LED criado. Exporte peça e tampa separadamente; confira encaixes e fatiamento.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Dimensões de canal LED inválidas.");
+    }
+  };
   const createStarter = (preset: StarterPreset) => {
     if (busy || solidLock.current) return;
     let geometry: BufferGeometry;
@@ -1011,6 +1032,12 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               </Button>
               <Button variant="outline" disabled={busy} onClick={() => createStarter("round-tag")}>
                 Criar medalha redonda
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createLedPrototype("frame")}>
+                Criar canal LED (moldura oca)
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createLedPrototype("lid")}>
+                Criar tampa LED separada
               </Button>
               <Button variant="outline" disabled={busy} onClick={() => createStarter("nameplate")}>
                 Criar placa 3D
