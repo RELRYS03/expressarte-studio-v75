@@ -1,4 +1,5 @@
 import { editSolid, solidPositions } from "@/lib/studio/solid-mesh-client";
+import { createStarterGeometry, type StarterPreset } from "@/lib/studio/starter-presets";
 import type { SolidOperation } from "@/lib/studio/solid-mesh";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
@@ -570,6 +571,19 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       setBusy(false);
     }
   };
+  const createStarter = (preset: StarterPreset) => {
+    if (busy || solidLock.current) return;
+    const geometry = createStarterGeometry(preset);
+    setUndoGeometry((old) => { old?.dispose(); return null; });
+    setImported((old) => {
+      old?.geometry.dispose();
+      return { name: preset + ".stl", geometry };
+    });
+    setView("3d");
+    setZoom(100);
+    setReset((v) => v + 1);
+    notify("Modelo inicial criado. Personalize, corte ou exporte como STL.");
+  };
   const importStl = async (file: File) => {
     if (!file.name.toLowerCase().endsWith(".stl") || file.size > 20 * 1024 * 1024) {
       notify("Selecione um STL de até 20 MB.");
@@ -921,6 +935,15 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                 e.currentTarget.value = "";
                 if (file) void runSolidEdit({ kind: "union-file", file });
               }} />
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("round-keychain")}>
+                Criar chaveiro redondo
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("rectangle-keychain")}>
+                Criar chaveiro retangular
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("nameplate")}>
+                Criar placa 3D
+              </Button>
               <Button variant="outline" onClick={() => importStlRef.current?.click()}>
                 <Upload /> Abrir STL
               </Button>
