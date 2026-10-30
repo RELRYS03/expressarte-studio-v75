@@ -204,6 +204,14 @@ function MeshEditPanel({
   const [cutPosition, setCutPosition] = useState(0);
   const [keepPositive, setKeepPositive] = useState(true);
   const [bridgeAvailable, setBridgeAvailable] = useState(false);
+  const [meshWorkbenchAvailable, setMeshWorkbenchAvailable] = useState(false);
+  const checkMeshWorkbench = useCallback(async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8767/v1/health", { signal: AbortSignal.timeout(2500) });
+      const status = await response.json() as { available?: boolean };
+      setMeshWorkbenchAvailable(response.ok && status.available === true);
+    } catch { setMeshWorkbenchAvailable(false); }
+  }, []);
   const checkBridge = useCallback(async () => {
     try {
       const response = await fetch("http://127.0.0.1:8766/v1/health", {
@@ -218,14 +226,15 @@ function MeshEditPanel({
   useEffect(() => {
     // Atualiza o estado da ponte quando ela inicia depois do Studio.
     void checkBridge();
-    const refresh = () => { void checkBridge(); };
+    void checkMeshWorkbench();
+    const refresh = () => { void checkBridge(); void checkMeshWorkbench(); };
     window.addEventListener("focus", refresh);
     const timer = window.setInterval(refresh, 10000);
     return () => {
       window.removeEventListener("focus", refresh);
       window.clearInterval(timer);
     };
-  }, [checkBridge]);
+  }, [checkBridge, checkMeshWorkbench]);
   const current = geometryDimensions(geometry);
   const box = geometry.boundingBox;
   const min = box ? box.min[axis] : 0;
@@ -275,9 +284,9 @@ function MeshEditPanel({
       </div>
       <section className="mesh-tool-section">
         <h3><Stethoscope size={15} /> Diagnóstico Mesh Workbench</h3>
-        <p className="mesh-caution">Análise local avançada da topologia pelo Blender. Não modifica a peça.</p>
-        <Button className="w-full" size="sm" variant="outline" disabled={!bridgeAvailable || diagnoseBusy} onClick={onDiagnose}>
-          {diagnoseBusy ? "Analisando malha…" : "Diagnosticar malha com Mesh Workbench"}
+        <p className="mesh-caution">{meshWorkbenchAvailable ? "Análise local avançada da topologia pelo Blender. Não modifica a peça." : "Inicie a ponte Mesh Workbench (porta 8767) para habilitar o diagnóstico."}</p>
+        <Button className="w-full" size="sm" variant="outline" disabled={!meshWorkbenchAvailable || diagnoseBusy} onClick={onDiagnose}>
+          {diagnoseBusy ? "Analisando malha…" : meshWorkbenchAvailable ? "Diagnosticar malha com Mesh Workbench" : "Mesh Workbench desconectado"}
         </Button>
         {diagnostic && <div className="mesh-stats-mini" role="status">
           <span>Vértices<strong>{diagnostic.vertices.toLocaleString("pt-BR")}</strong></span>
