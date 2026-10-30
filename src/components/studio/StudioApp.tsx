@@ -1,6 +1,7 @@
 import { editSolid, solidPositions } from "@/lib/studio/solid-mesh-client";
 import { createStarterGeometry, type StarterPreset } from "@/lib/studio/starter-presets";
 import { geometryFromSvg } from "@/lib/studio/svg-geometry";
+import { placeRaisedLogo } from "@/lib/studio/logo-placement";
 import type { SolidOperation } from "@/lib/studio/solid-mesh";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
@@ -499,6 +500,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const mergeStlRef = useRef<HTMLInputElement>(null);
   const solidStlRef = useRef<HTMLInputElement>(null);
   const svgImportRef = useRef<HTMLInputElement>(null);
+  const logoOverlayRef = useRef<HTMLInputElement>(null);
   const booleanStlRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -600,6 +602,27 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     setZoom(100);
     setReset((v) => v + 1);
     notify("Modelo inicial criado. Personalize, corte ou exporte como STL.");
+  };
+  const applySvgLogo = async (file: File) => {
+    if (!imported || busy || solidLock.current) return;
+    if (!file.name.toLowerCase().endsWith(".svg") || file.size > 2_000_000) {
+      notify("Escolha um SVG de até 2 MB."); return;
+    }
+    solidLock.current = true;
+    setBusy(true); setSolidBusy(true);
+    let logo: BufferGeometry | undefined;
+    try {
+      logo = geometryFromSvg(await file.text(), starterWidth, starterThickness);
+      placeRaisedLogo(imported.geometry, logo);
+      const union = await editSolid(solidPositions(imported.geometry), {
+        kind: "union", second: solidPositions(logo),
+      });
+      commitMesh(union, "Logo aplicado com união sólida. Confira no Bambu Studio.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível aplicar o logo.");
+    } finally {
+      logo?.dispose(); solidLock.current = false; setBusy(false); setSolidBusy(false);
+    }
   };
   const importSvg = async (file: File) => {
     if (busy || solidLock.current) return;
@@ -998,6 +1021,13 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               }} />
               <Button variant="outline" disabled={busy} onClick={() => svgImportRef.current?.click()}>
                 <Upload /> Criar logo 3D de SVG
+              </Button>
+              <input type="file" accept=".svg,image/svg+xml" ref={logoOverlayRef} className="hidden" onChange={e => {
+                const file = e.target.files?.[0]; e.currentTarget.value = "";
+                if (file) void applySvgLogo(file);
+              }} />
+              <Button variant="outline" disabled={!imported || busy} onClick={() => logoOverlayRef.current?.click()}>
+                <Layers /> Aplicar logo SVG sobre STL
               </Button>
               <Button variant="outline" onClick={() => importStlRef.current?.click()}>
                 <Upload /> Abrir STL
