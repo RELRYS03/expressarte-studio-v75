@@ -1,5 +1,6 @@
 import { editSolid, solidPositions } from "@/lib/studio/solid-mesh-client";
 import { createStarterGeometry, type StarterPreset } from "@/lib/studio/starter-presets";
+import { geometryFromSvg } from "@/lib/studio/svg-geometry";
 import type { SolidOperation } from "@/lib/studio/solid-mesh";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
@@ -497,6 +498,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const importStlRef = useRef<HTMLInputElement>(null);
   const mergeStlRef = useRef<HTMLInputElement>(null);
   const solidStlRef = useRef<HTMLInputElement>(null);
+  const svgImportRef = useRef<HTMLInputElement>(null);
   const booleanStlRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -598,6 +600,25 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     setZoom(100);
     setReset((v) => v + 1);
     notify("Modelo inicial criado. Personalize, corte ou exporte como STL.");
+  };
+  const importSvg = async (file: File) => {
+    if (busy || solidLock.current) return;
+    if (!file.name.toLowerCase().endsWith(".svg") || file.size > 2_000_000) {
+      notify("Escolha um SVG de até 2 MB."); return;
+    }
+    setBusy(true);
+    try {
+      const geometry = geometryFromSvg(await file.text(), starterWidth, starterThickness);
+      setUndoGeometry(old => { old?.dispose(); return null; });
+      setImported(old => {
+        old?.geometry.dispose();
+        return { name: file.name.replace(/\.svg$/i, "") + ".stl", geometry };
+      });
+      setView("3d"); setZoom(100); setReset(v => v + 1);
+      notify("Logo SVG extrudado em 3D. Confira furos, contorno e fatiamento.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Falha ao converter SVG.");
+    } finally { setBusy(false); }
   };
   const importStl = async (file: File) => {
     if (!file.name.toLowerCase().endsWith(".stl") || file.size > 20 * 1024 * 1024) {
@@ -970,6 +991,13 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               </Button>
               <Button variant="outline" disabled={busy} onClick={() => createStarter("nameplate")}>
                 Criar placa 3D
+              </Button>
+              <input type="file" accept=".svg,image/svg+xml" ref={svgImportRef} className="hidden" onChange={e => {
+                const file = e.target.files?.[0]; e.currentTarget.value = "";
+                if (file) void importSvg(file);
+              }} />
+              <Button variant="outline" disabled={busy} onClick={() => svgImportRef.current?.click()}>
+                <Upload /> Criar logo 3D de SVG
               </Button>
               <Button variant="outline" onClick={() => importStlRef.current?.click()}>
                 <Upload /> Abrir STL
