@@ -16,7 +16,7 @@ describe("LED enclosure prototype", () => {
     });
   }
   it("rejects missing cable-cut support rather than silently creating a solid wall", () => {
-    expect(() => createLedChannelPart("frame", { ...opts, cableDiameter: 3 })).toThrow(/corte sólido/);
+    expect(() => createLedChannelPart("frame", { ...opts, wall: 3, cableDiameter: 3 })).toThrow(/corte sólido/);
   });
   it("rejects invalid geometry and thin walls", () => {
     expect(() => createLedChannelPart("frame", { ...opts, wall: 0.5 })).toThrow();
