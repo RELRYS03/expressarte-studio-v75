@@ -544,7 +544,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
           downloadBlob(
             new Blob([new Uint8Array(data.buffer)], { type: "application/sla" }),
             imported
-              ? `ExpressArte-${imported.name.replace(/\\.stl$/i, "").replace(/[^a-zA-Z0-9_-]+/g, "-")}.stl`
+              ? `ExpressArte-${imported.name.replace(/\.stl$/i, "").replace(/[^a-zA-Z0-9_-]+/g, "-")}.stl`
               : "ExpressArte-medalha.stl",
           );
         } else if (format === "obj") {
