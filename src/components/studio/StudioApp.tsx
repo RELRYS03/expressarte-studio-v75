@@ -178,6 +178,9 @@ function MeshEditPanel({
   onMerge,
   onBooleanUnion,
   onBlenderCut,
+  onDiagnose,
+  diagnostic,
+  diagnoseBusy,
   onSolidCut,
   onSolidUnion,
   notify,
@@ -190,6 +193,9 @@ function MeshEditPanel({
   onMerge: () => void;
   onBooleanUnion: () => void;
   onBlenderCut: (axis: MeshAxis, offset: number, keepPositive: boolean) => void;
+  onDiagnose: () => void;
+  diagnostic: { vertices: number; edges: number; faces: number; boundary_edges: number; nonmanifold_edges: number; finite: boolean; } | null;
+  diagnoseBusy: boolean;
   notify: (message: string) => void;
 }) {
   const [dimensions, setDimensions] = useState({ x: "", y: "", z: "" });
@@ -198,6 +204,14 @@ function MeshEditPanel({
   const [cutPosition, setCutPosition] = useState(0);
   const [keepPositive, setKeepPositive] = useState(true);
   const [bridgeAvailable, setBridgeAvailable] = useState(false);
+  const [meshWorkbenchAvailable, setMeshWorkbenchAvailable] = useState(false);
+  const checkMeshWorkbench = useCallback(async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8767/v1/health", { signal: AbortSignal.timeout(2500) });
+      const status = await response.json() as { available?: boolean };
+      setMeshWorkbenchAvailable(response.ok && status.available === true);
+    } catch { setMeshWorkbenchAvailable(false); }
+  }, []);
   const checkBridge = useCallback(async () => {
     try {
       const response = await fetch("http://127.0.0.1:8766/v1/health", {
@@ -212,14 +226,15 @@ function MeshEditPanel({
   useEffect(() => {
     // Atualiza o estado da ponte quando ela inicia depois do Studio.
     void checkBridge();
-    const refresh = () => { void checkBridge(); };
+    void checkMeshWorkbench();
+    const refresh = () => { void checkBridge(); void checkMeshWorkbench(); };
     window.addEventListener("focus", refresh);
     const timer = window.setInterval(refresh, 10000);
     return () => {
       window.removeEventListener("focus", refresh);
       window.clearInterval(timer);
     };
-  }, [checkBridge]);
+  }, [checkBridge, checkMeshWorkbench]);
   const current = geometryDimensions(geometry);
   const box = geometry.boundingBox;
   const min = box ? box.min[axis] : 0;
@@ -267,6 +282,20 @@ function MeshEditPanel({
           </strong>
         </span>
       </div>
+      <section className="mesh-tool-section">
+        <h3><Stethoscope size={15} /> Diagnóstico Mesh Workbench</h3>
+        <p className="mesh-caution">{meshWorkbenchAvailable ? "Análise local avançada da topologia pelo Blender. Não modifica a peça." : "Inicie a ponte Mesh Workbench (porta 8767) para habilitar o diagnóstico."}</p>
+        <Button className="w-full" size="sm" variant="outline" disabled={!meshWorkbenchAvailable || diagnoseBusy} onClick={onDiagnose}>
+          {diagnoseBusy ? "Analisando malha…" : meshWorkbenchAvailable ? "Diagnosticar malha com Mesh Workbench" : "Mesh Workbench desconectado"}
+        </Button>
+        {diagnostic && <div className="mesh-stats-mini" role="status">
+          <span>Vértices<strong>{diagnostic.vertices.toLocaleString("pt-BR")}</strong></span>
+          <span>Arestas abertas<strong>{diagnostic.boundary_edges.toLocaleString("pt-BR")}</strong></span>
+          <span>Arestas não manifold<strong>{diagnostic.nonmanifold_edges.toLocaleString("pt-BR")}</strong></span>
+          <span>Faces<strong>{diagnostic.faces.toLocaleString("pt-BR")}</strong></span>
+          <span>Geometria finita<strong>{diagnostic.finite ? "Sim" : "Não"}</strong></span>
+        </div>}
+      </section>
       <section className="mesh-tool-section">
         <h3>
           <Scaling size={15} /> Redimensionar
@@ -482,6 +511,8 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [solidBusy, setSolidBusy] = useState(false);
+  const [meshWorkbenchBusy, setMeshWorkbenchBusy] = useState(false);
+  const [meshWorkbenchDiagnostic, setMeshWorkbenchDiagnostic] = useState<{ vertices: number; edges: number; faces: number; boundary_edges: number; nonmanifold_edges: number; finite: boolean; } | null>(null);
   const solidLock = useRef(false);
   const [starterWidth, setStarterWidth] = useState(50);
   const [starterHeight, setStarterHeight] = useState(32);
@@ -817,6 +848,29 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       if (model) disposeModel(model);
       setBusy(false);
     }
+  };
+  const runMeshWorkbenchInspect = async () => {
+    if (!imported || busy || meshWorkbenchBusy) return;
+    setMeshWorkbenchBusy(true);
+    try {
+      const THREE = await import("three");
+      const { STLExporter } = await import("three/examples/jsm/exporters/STLExporter.js");
+      const group = new THREE.Group();
+      group.add(new THREE.Mesh(imported.geometry.clone(), new THREE.MeshStandardMaterial()));
+      const binary = new STLExporter().parse(group, { binary: true });
+      disposeModel(group);
+      const response = await fetch("http://127.0.0.1:8767/v1/inspect", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(190000),
+        body: JSON.stringify({ stlBase64: encodeBase64(new Uint8Array(binary.buffer, binary.byteOffset, binary.byteLength)) }),
+      });
+      const result = await response.json() as { error?: string; detail?: string; inspection?: { vertices: number; edges: number; faces: number; boundary_edges: number; nonmanifold_edges: number; finite: boolean; } };
+      if (!response.ok || !result.inspection) throw new Error(result.error || result.detail || "Falha no diagnóstico Mesh Workbench.");
+      setMeshWorkbenchDiagnostic(result.inspection);
+      notify("Diagnóstico Mesh Workbench concluído. A malha original não foi alterada.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível executar o diagnóstico Mesh Workbench.");
+    } finally { setMeshWorkbenchBusy(false); }
   };
   const inspectFile = async (file: File) => {
     if (file.size > 20 * 1024 * 1024) {
@@ -1252,6 +1306,9 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                     onBlenderCut={(axis, offset, keepPositive) =>
                       void runBlenderEdit("cut", { axis, offset, keepPositive })
                     }
+                    onDiagnose={() => void runMeshWorkbenchInspect()}
+                    diagnostic={meshWorkbenchDiagnostic}
+                    diagnoseBusy={meshWorkbenchBusy}
                     notify={notify}
                   />
                   </fieldset>
