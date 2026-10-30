@@ -20,3 +20,26 @@ describe("starter models in millimetres", () => {
     });
   }
 });
+
+describe("parametric tools", () => {
+  it("scales a rectangular keychain without changing extrusion depth", () => {
+    const mesh = createStarterGeometry("rectangle-keychain", { width: 85, height: 40, thickness: 4, holeDiameter: 6 });
+    try {
+      mesh.computeBoundingBox();
+      const size = mesh.boundingBox!.getSize(new Vector3());
+      expect([size.x, size.y, size.z]).toEqual([85, 40, 4]);
+    } finally { mesh.dispose(); }
+  });
+  it("generates a hexagonal keychain and round tag", () => {
+    for (const preset of ["hex-keychain", "round-tag"] as const) {
+      const geometry = createStarterGeometry(preset);
+      expect(geometry.getAttribute("position").count).toBeGreaterThan(30);
+      geometry.dispose();
+    }
+  });
+  it("rejects invalid dimensions instead of producing corrupt STL", () => {
+    expect(() => createStarterGeometry("round-keychain", { width: NaN })).toThrow();
+    expect(() => createStarterGeometry("round-keychain", { holeDiameter: 25 })).toThrow();
+    expect(() => createStarterGeometry("nameplate", { thickness: 0 })).toThrow();
+  });
+});
