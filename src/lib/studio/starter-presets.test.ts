@@ -15,7 +15,7 @@ describe("starter models in millimetres", () => {
         mesh.computeBoundingBox();
         const span = mesh.boundingBox!.getSize(new Vector3());
         expect([span.x, span.y, span.z].map(v => Math.round(v * 1000) / 1000)).toEqual(size);
-        expect(Array.from(mesh.attributes.position.array).every(Number.isFinite)).toBe(true);
+        expect(Array.from(mesh.getAttribute("position").array).every(Number.isFinite)).toBe(true);
       } finally { mesh.dispose(); }
     });
   }
