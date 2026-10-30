@@ -480,6 +480,10 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const [busy, setBusy] = useState(false);
   const [solidBusy, setSolidBusy] = useState(false);
   const solidLock = useRef(false);
+  const [starterWidth, setStarterWidth] = useState(50);
+  const [starterHeight, setStarterHeight] = useState(32);
+  const [starterThickness, setStarterThickness] = useState(3);
+  const [starterHole, setStarterHole] = useState(5);
   const [mesh, setMesh] = useState<{
     name: string;
     triangles: number;
@@ -575,7 +579,16 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   };
   const createStarter = (preset: StarterPreset) => {
     if (busy || solidLock.current) return;
-    const geometry = createStarterGeometry(preset);
+    let geometry: BufferGeometry;
+    try {
+      geometry = createStarterGeometry(preset, {
+        width: starterWidth, height: starterHeight,
+        thickness: starterThickness, holeDiameter: starterHole,
+      });
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Parâmetros inválidos.");
+      return;
+    }
     setUndoGeometry((old) => { old?.dispose(); return null; });
     setImported((old) => {
       old?.geometry.dispose();
@@ -937,11 +950,23 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                 e.currentTarget.value = "";
                 if (file) void runSolidEdit({ kind: "union-file", file });
               }} />
+              <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}} aria-label="Dimensões para novos modelos">
+                <label>Largura / diâmetro (mm) <input type="number" min="15" max="300" step="1" value={starterWidth} onChange={e=>setStarterWidth(Number(e.target.value))} style={{width:72}} /></label>
+                <label>Altura (mm) <input type="number" min="15" max="300" step="1" value={starterHeight} onChange={e=>setStarterHeight(Number(e.target.value))} style={{width:72}} /></label>
+                <label>Espessura (mm) <input type="number" min="0.8" max="30" step="0.5" value={starterThickness} onChange={e=>setStarterThickness(Number(e.target.value))} style={{width:72}} /></label>
+                <label>Furo (mm) <input type="number" min="0" max="50" step="0.5" value={starterHole} onChange={e=>setStarterHole(Number(e.target.value))} style={{width:72}} /></label>
+              </div>
               <Button variant="outline" disabled={busy} onClick={() => createStarter("round-keychain")}>
                 Criar chaveiro redondo
               </Button>
               <Button variant="outline" disabled={busy} onClick={() => createStarter("rectangle-keychain")}>
                 Criar chaveiro retangular
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("hex-keychain")}>
+                Criar chaveiro hexagonal
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("round-tag")}>
+                Criar medalha redonda
               </Button>
               <Button variant="outline" disabled={busy} onClick={() => createStarter("nameplate")}>
                 Criar placa 3D
