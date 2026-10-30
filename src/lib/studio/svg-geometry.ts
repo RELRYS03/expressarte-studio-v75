@@ -18,7 +18,7 @@ export function geometryFromSvg(source: string, widthMm: number, depthMm: number
   const parsed = new SVGLoader().parse(source);
   const shapes: Shape[] = [];
   for (const path of parsed.paths) {
-    if (path.userData?.style?.fill === "none") continue;
+    if ((path.userData?.["style"] as { fill?: string } | undefined)?.fill === "none") continue;
     shapes.push(...SVGLoader.createShapes(path));
   }
   if (!shapes.length || shapes.length > 500) throw new Error("SVG sem caminhos preenchidos ou excessivamente complexo.");
