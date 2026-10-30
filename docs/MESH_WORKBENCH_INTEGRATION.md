@@ -1,20 +1,14 @@
-# Mesh Workbench adapter — stage 0 (runtime readiness)
+# Mesh Workbench — integração local Express'Arte
 
-This branch begins the integration without replacing the current Manifold worker or Blender bridge.
+## Estado desta etapa
 
-## What is added
+A interface do editor STL agora possui **Diagnóstico Mesh Workbench**. A análise é somente leitura: envia uma cópia STL da geometria atual para a ponte local e apresenta vértices, arestas, faces, arestas de borda, arestas não-manifold e validade numérica. O arquivo/objeto aberto no Studio não é substituído.
 
-`scripts/mesh_workbench_adapter.py` is a read-only readiness probe. It checks:
-- Python 3.11 or newer;
-- the installed `mesh-workbench` package and CLI;
-- the Blender executable (PATH or `EXPRESSARTE_BLENDER_EXE`);
-- whether both CLI help and Blender version commands execute.
+A ponte usa o CLI oficial `mesh-workbench run` e o Blender instalado localmente. Ela aceita apenas um STL limitado a 20 MB e executa uma receita fixa de importação + inspeção. O navegador não pode enviar receitas, caminhos, scripts ou comandos arbitrários.
 
-It does not install dependencies, change Blender settings, edit models, or call a hosted service.
+## Instalação no Windows (uma vez)
 
-## Install upstream runtime on Windows
-
-Use a separate checkout and virtual environment. Keep it outside the Studio repository:
+PowerShell:
 
 ```powershell
 py -3.11 -m venv "$env:USERPROFILE\mesh-workbench-venv"
@@ -24,25 +18,45 @@ Set-Location "$env:USERPROFILE\mesh-workbench"
 python -m pip install -e .
 ```
 
-Ensure Blender 5.2.2 LTS is installed. Set its executable for this PowerShell session if it is not on PATH:
+Instale Blender 5.2.2 LTS. Se estiver em outro local, defina `EXPRESSARTE_BLENDER_EXE` para o caminho do executável.
+
+## Iniciar a ponte
+
+No repositório Express'Arte Studio, execute:
 
 ```powershell
-$env:EXPRESSARTE_BLENDER_EXE = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe"
-$env:PATH = "$env:USERPROFILE\mesh-workbench-venv\Scripts;$env:PATH"
-Set-Location <STUDIO_REPOSITORY_PATH>
-python scripts\mesh_workbench_adapter.py
+.scripts\INICIAR_MESH_WORKBENCH_BRIDGE_WINDOWS.bat
 ```
 
-The final command emits JSON. Exit code 0 means the local runtime is ready for the next integration stage; exit code 2 means one or more prerequisites are missing.
+A ponte escuta somente em `127.0.0.1:8767`. Mantenha a janela aberta enquanto usar o Studio. O serviço existente do Blender em `127.0.0.1:8766` continua separado e inalterado.
 
-## Integration boundary
+Verifique:
 
-Mesh Workbench is a local Blender CLI, not an MCP server or hosted API. The next stage must wrap selected operations behind a local-only bridge, with strict input/output paths, timeouts, source hashes, audit receipts, and no silent source replacement. The current Express'Arte Blender bridge on port 8766 and Manifold WASM worker remain unchanged.
+```powershell
+Invoke-RestMethod http://127.0.0.1:8767/v1/health
+```
 
-## Not yet implemented
+A resposta deve indicar `available: true`, `meshWorkbench: true` e `blender: true`.
 
-- No UI buttons or Mesh Workbench operations are exposed in Studio yet.
-- No STL repair is claimed.
-- No STL/3MF export behavior is changed.
-- No user model has been processed by this probe.
-- Windows execution and real STL/Bambu Studio validation remain required before merging.
+## Uso no Studio
+
+1. Abra Studio 3D e importe um STL.
+2. No painel direito, localize **Diagnóstico Mesh Workbench**.
+3. Aguarde a análise e confira os contadores de topologia.
+4. Compare com o Mesh Doctor e, depois, com o Bambu Studio.
+
+Interpretação básica:
+- `boundary_edges > 0`: existem bordas abertas.
+- `nonmanifold_edges > 0`: há arestas não-manifold; isso pode indicar defeitos de topologia.
+- `finite = false`: há coordenadas inválidas.
+- Zero nesses indicadores é evidência útil, mas não certifica sozinho que o modelo seja imprimível nem detecta toda colisão/interseção.
+
+## Limites e segurança
+
+- Esta etapa implementa diagnóstico, não reparo automático.
+- O diagnóstico não altera a malha importada, nem chama serviços remotos.
+- Arquivos temporários e saídas são isolados em diretório temporário e removidos ao encerrar a execução.
+- Limite de entrada: 20 MB; timeout: 180 segundos.
+- A ponte deve permanecer local; não exponha a porta 8767 na rede.
+- O upstream Mesh Workbench é MIT, mas a instalação é independente do repositório Express'Arte.
+- Testes reais em Windows e fatiamento no Bambu Studio ainda são obrigatórios antes do merge.
