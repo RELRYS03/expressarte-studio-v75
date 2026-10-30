@@ -1,4 +1,8 @@
 import { editSolid, solidPositions } from "@/lib/studio/solid-mesh-client";
+import { createStarterGeometry, type StarterPreset } from "@/lib/studio/starter-presets";
+import { geometryFromSvg } from "@/lib/studio/svg-geometry";
+import { placeRaisedLogo } from "@/lib/studio/logo-placement";
+import { createLedChannelPart } from "@/lib/studio/led-channel";
 import type { SolidOperation } from "@/lib/studio/solid-mesh";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
@@ -479,6 +483,10 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const [busy, setBusy] = useState(false);
   const [solidBusy, setSolidBusy] = useState(false);
   const solidLock = useRef(false);
+  const [starterWidth, setStarterWidth] = useState(50);
+  const [starterHeight, setStarterHeight] = useState(32);
+  const [starterThickness, setStarterThickness] = useState(3);
+  const [starterHole, setStarterHole] = useState(5);
   const [mesh, setMesh] = useState<{
     name: string;
     triangles: number;
@@ -492,6 +500,8 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const importStlRef = useRef<HTMLInputElement>(null);
   const mergeStlRef = useRef<HTMLInputElement>(null);
   const solidStlRef = useRef<HTMLInputElement>(null);
+  const svgImportRef = useRef<HTMLInputElement>(null);
+  const logoOverlayRef = useRef<HTMLInputElement>(null);
   const booleanStlRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -542,7 +552,9 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
           const data = new STLExporter().parse(model, { binary: true });
           downloadBlob(
             new Blob([new Uint8Array(data.buffer)], { type: "application/sla" }),
-            "ExpressArte-medalha.stl",
+            imported
+              ? `ExpressArte-${imported.name.replace(/\.stl$/i, "").replace(/[^a-zA-Z0-9_-]+/g, "-")}.stl`
+              : "ExpressArte-medalha.stl",
           );
         } else if (format === "obj") {
           const { OBJExporter } = await import("three/examples/jsm/exporters/OBJExporter.js");
@@ -569,6 +581,88 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     } finally {
       setBusy(false);
     }
+  };
+  const createLedPrototype = (part: "frame" | "lid") => {
+    if (busy || solidLock.current) return;
+    try {
+      const geometry = createLedChannelPart(part, {
+        width: starterWidth,
+        height: starterHeight,
+        depth: Math.max(5, starterThickness * 5),
+        wall: 2,
+      });
+      setUndoGeometry(old => { old?.dispose(); return null; });
+      setImported(old => {
+        old?.geometry.dispose();
+        return { name: `led-channel-${part}.stl`, geometry };
+      });
+      setView("3d"); setZoom(100); setReset(v => v + 1);
+      notify("Protótipo de canal LED criado. Exporte peça e tampa separadamente; confira encaixes e fatiamento.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Dimensões de canal LED inválidas.");
+    }
+  };
+  const createStarter = (preset: StarterPreset) => {
+    if (busy || solidLock.current) return;
+    let geometry: BufferGeometry;
+    try {
+      geometry = createStarterGeometry(preset, {
+        width: starterWidth, height: starterHeight,
+        thickness: starterThickness, holeDiameter: starterHole,
+      });
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Parâmetros inválidos.");
+      return;
+    }
+    setUndoGeometry((old) => { old?.dispose(); return null; });
+    setImported((old) => {
+      old?.geometry.dispose();
+      return { name: preset + ".stl", geometry };
+    });
+    setView("3d");
+    setZoom(100);
+    setReset((v) => v + 1);
+    notify("Modelo inicial criado. Personalize, corte ou exporte como STL.");
+  };
+  const applySvgLogo = async (file: File) => {
+    if (!imported || busy || solidLock.current) return;
+    if (!file.name.toLowerCase().endsWith(".svg") || file.size > 2_000_000) {
+      notify("Escolha um SVG de até 2 MB."); return;
+    }
+    solidLock.current = true;
+    setBusy(true); setSolidBusy(true);
+    let logo: BufferGeometry | undefined;
+    try {
+      logo = geometryFromSvg(await file.text(), starterWidth, starterThickness);
+      placeRaisedLogo(imported.geometry, logo);
+      const union = await editSolid(solidPositions(imported.geometry), {
+        kind: "union", second: solidPositions(logo),
+      });
+      commitMesh(union, "Logo aplicado com união sólida. Confira no Bambu Studio.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível aplicar o logo.");
+    } finally {
+      logo?.dispose(); solidLock.current = false; setBusy(false); setSolidBusy(false);
+    }
+  };
+  const importSvg = async (file: File) => {
+    if (busy || solidLock.current) return;
+    if (!file.name.toLowerCase().endsWith(".svg") || file.size > 2_000_000) {
+      notify("Escolha um SVG de até 2 MB."); return;
+    }
+    setBusy(true);
+    try {
+      const geometry = geometryFromSvg(await file.text(), starterWidth, starterThickness);
+      setUndoGeometry(old => { old?.dispose(); return null; });
+      setImported(old => {
+        old?.geometry.dispose();
+        return { name: file.name.replace(/\.svg$/i, "") + ".stl", geometry };
+      });
+      setView("3d"); setZoom(100); setReset(v => v + 1);
+      notify("Logo SVG extrudado em 3D. Confira furos, contorno e fatiamento.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Falha ao converter SVG.");
+    } finally { setBusy(false); }
   };
   const importStl = async (file: File) => {
     if (!file.name.toLowerCase().endsWith(".stl") || file.size > 20 * 1024 * 1024) {
@@ -921,6 +1015,47 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                 e.currentTarget.value = "";
                 if (file) void runSolidEdit({ kind: "union-file", file });
               }} />
+              <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}} aria-label="Dimensões para novos modelos">
+                <label>Largura / diâmetro (mm) <input type="number" min="15" max="300" step="1" value={starterWidth} onChange={e=>setStarterWidth(Number(e.target.value))} style={{width:72}} /></label>
+                <label>Altura (mm) <input type="number" min="15" max="300" step="1" value={starterHeight} onChange={e=>setStarterHeight(Number(e.target.value))} style={{width:72}} /></label>
+                <label>Espessura (mm) <input type="number" min="0.8" max="30" step="0.5" value={starterThickness} onChange={e=>setStarterThickness(Number(e.target.value))} style={{width:72}} /></label>
+                <label>Furo (mm) <input type="number" min="0" max="50" step="0.5" value={starterHole} onChange={e=>setStarterHole(Number(e.target.value))} style={{width:72}} /></label>
+              </div>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("round-keychain")}>
+                Criar chaveiro redondo
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("rectangle-keychain")}>
+                Criar chaveiro retangular
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("hex-keychain")}>
+                Criar chaveiro hexagonal
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("round-tag")}>
+                Criar medalha redonda
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createLedPrototype("frame")}>
+                Criar canal LED (moldura oca)
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createLedPrototype("lid")}>
+                Criar tampa LED separada
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("nameplate")}>
+                Criar placa 3D
+              </Button>
+              <input type="file" accept=".svg,image/svg+xml" ref={svgImportRef} className="hidden" onChange={e => {
+                const file = e.target.files?.[0]; e.currentTarget.value = "";
+                if (file) void importSvg(file);
+              }} />
+              <Button variant="outline" disabled={busy} onClick={() => svgImportRef.current?.click()}>
+                <Upload /> Criar logo 3D de SVG
+              </Button>
+              <input type="file" accept=".svg,image/svg+xml" ref={logoOverlayRef} className="hidden" onChange={e => {
+                const file = e.target.files?.[0]; e.currentTarget.value = "";
+                if (file) void applySvgLogo(file);
+              }} />
+              <Button variant="outline" disabled={!imported || busy} onClick={() => logoOverlayRef.current?.click()}>
+                <Layers /> Aplicar logo SVG sobre STL
+              </Button>
               <Button variant="outline" onClick={() => importStlRef.current?.click()}>
                 <Upload /> Abrir STL
               </Button>
