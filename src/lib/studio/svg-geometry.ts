@@ -1,4 +1,4 @@
-import { Box3, ExtrudeGeometry, Group, Mesh, Shape, Vector3 } from "three";
+import { ExtrudeGeometry, Shape, Vector3 } from "three";
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
 
 export function validateSvgSource(source: string): void {
@@ -33,8 +33,8 @@ export function geometryFromSvg(source: string, widthMm: number, depthMm: number
   }
   const scale = widthMm / size.x;
   geometry.translate(-box.min.x, -box.min.y, -box.min.z);
-  geometry.scale(scale, -scale, 1);
-  geometry.translate(-widthMm / 2, size.y * scale / 2, 0);
+  geometry.scale(scale, scale, 1);
+  geometry.translate(-widthMm / 2, -size.y * scale / 2, 0);
   geometry.computeBoundingBox();
   geometry.computeVertexNormals();
   return geometry;
