@@ -3,6 +3,7 @@ import { createStarterGeometry, type StarterPreset } from "@/lib/studio/starter-
 import { geometryFromSvg } from "@/lib/studio/svg-geometry";
 import { placeRaisedLogo } from "@/lib/studio/logo-placement";
 import { createLedChannelPart } from "@/lib/studio/led-channel";
+import { createOrganizerGeometry } from "@/lib/studio/organizer";
 import type { SolidOperation } from "@/lib/studio/solid-mesh";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
@@ -43,6 +44,7 @@ import {
   Scaling,
   Combine,
   Undo2,
+  Grid3X3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -633,6 +635,33 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       notify(error instanceof Error ? error.message : "Dimensões de canal LED inválidas.");
     }
   };
+  const createOrganizer = async () => {
+    if (busy || solidLock.current) return;
+    solidLock.current = true;
+    setBusy(true);
+    setSolidBusy(true);
+    try {
+      const geometry = await createOrganizerGeometry();
+      setUndoGeometry((old) => {
+        old?.dispose();
+        return null;
+      });
+      setImported((old) => {
+        old?.geometry.dispose();
+        return { name: "organizador-220x140x40.stl", geometry };
+      });
+      setView("3d");
+      setZoom(100);
+      setReset((value) => value + 1);
+      notify("Organizador 220 × 140 × 40 mm criado: um canal longo e três compartimentos. Revise o encaixe e o fatiamento no Bambu Studio.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível gerar o organizador.");
+    } finally {
+      solidLock.current = false;
+      setBusy(false);
+      setSolidBusy(false);
+    }
+  };
   const createStarter = (preset: StarterPreset) => {
     if (busy || solidLock.current) return;
     let geometry: BufferGeometry;
@@ -1089,6 +1118,9 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               </Button>
               <Button variant="outline" disabled={busy} onClick={() => createLedPrototype("frame")}>
                 Criar canal LED (moldura oca)
+              </Button>
+              <Button variant="outline" disabled={busy || solidBusy} onClick={() => void createOrganizer()}>
+                <Grid3X3 size={15} /> Criar organizador 220 × 140 × 40 mm
               </Button>
               <Button variant="outline" disabled={busy} onClick={() => createLedPrototype("lid")}>
                 Criar tampa LED separada
