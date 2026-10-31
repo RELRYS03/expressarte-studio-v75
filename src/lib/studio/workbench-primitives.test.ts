@@ -10,7 +10,7 @@ describe("primitivas do Model Workbench", () => {
     expect(mesh.geometry.getAttribute("position").count).toBeGreaterThan(0);
     expect(mesh.geometry.boundingBox).not.toBeNull();
     expect(mesh.material).toBeDefined();
-    expect(mesh.userData.primitive).toBe(kind);
+    expect(mesh.userData["primitive"]).toBe(kind);
     mesh.geometry.dispose();
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     materials.forEach((material) => material.dispose());
