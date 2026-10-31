@@ -61,6 +61,10 @@ export function weldGeometry(source: BufferGeometry): BufferGeometry {
   const result = new BufferGeometry();
   result.setAttribute("position", new BufferAttribute(new Float32Array(unique), 3));
   result.setIndex(indices);
+  const storedFaceGroups = source.userData["editFaceGroups"];
+  if (Array.isArray(storedFaceGroups)) {
+    result.userData["editFaceGroups"] = storedFaceGroups.map((group: number[]) => [...group]);
+  }
   return finalize(result);
 }
 
@@ -110,36 +114,57 @@ export function buildMeshTopology(geometry: BufferGeometry): MeshTopology {
     }
   }
 
-  const parent = Array.from({ length: triangleCount }, (_, i) => i);
-  const find = (value: number): number => {
-    if (parent[value] !== value) parent[value] = find(parent[value]!);
-    return parent[value]!;
-  };
-  const unite = (a: number, b: number) => {
-    const rootA = find(a);
-    const rootB = find(b);
-    if (rootA !== rootB) parent[rootB] = rootA;
-  };
-
-  for (const connected of edgeTriangles.values()) {
-    if (connected.length < 2) continue;
-    for (let i = 0; i < connected.length; i++) {
-      for (let j = i + 1; j < connected.length; j++) {
-        const first = triangles[connected[i]!]!;
-        const second = triangles[connected[j]!]!;
-        if (first.normal.dot(second.normal) < PLANAR_DOT) continue;
-        const distance = Math.abs(first.normal.dot(second.center.clone().sub(first.center)));
-        if (distance <= PLANAR_DISTANCE) unite(connected[i]!, connected[j]!);
-      }
-    }
-  }
+  const cachedGroups = geometry.userData["editFaceGroups"] as unknown;
+  const cachedGroupsValid = Array.isArray(cachedGroups)
+    && cachedGroups.length > 0
+    && cachedGroups.every((group: unknown) =>
+      Array.isArray(group)
+      && group.length > 0
+      && group.every((triangle: unknown) =>
+        typeof triangle === "number"
+        && Number.isInteger(triangle)
+        && triangle >= 0
+        && triangle < triangleCount
+      )
+    )
+    && cachedGroups.flat().length === triangleCount
+    && new Set(cachedGroups.flat()).size === triangleCount;
 
   const grouped = new Map<number, number[]>();
-  for (let triangle = 0; triangle < triangleCount; triangle++) {
-    const root = find(triangle);
-    const members = grouped.get(root) ?? [];
-    members.push(triangle);
-    grouped.set(root, members);
+  if (cachedGroupsValid) {
+    (cachedGroups as number[][]).forEach((members, id) => grouped.set(id, [...members]));
+  } else {
+    const parent = Array.from({ length: triangleCount }, (_, i) => i);
+    const find = (value: number): number => {
+      if (parent[value] !== value) parent[value] = find(parent[value]!);
+      return parent[value]!;
+    };
+    const unite = (a: number, b: number) => {
+      const rootA = find(a);
+      const rootB = find(b);
+      if (rootA !== rootB) parent[rootB] = rootA;
+    };
+
+    for (const connected of edgeTriangles.values()) {
+      if (connected.length < 2) continue;
+      for (let i = 0; i < connected.length; i++) {
+        for (let j = i + 1; j < connected.length; j++) {
+          const first = triangles[connected[i]!]!;
+          const second = triangles[connected[j]!]!;
+          if (first.normal.dot(second.normal) < PLANAR_DOT) continue;
+          const distance = Math.abs(first.normal.dot(second.center.clone().sub(first.center)));
+          if (distance <= PLANAR_DISTANCE) unite(connected[i]!, connected[j]!);
+        }
+      }
+    }
+
+    for (let triangle = 0; triangle < triangleCount; triangle++) {
+      const root = find(triangle);
+      const members = grouped.get(root) ?? [];
+      members.push(triangle);
+      grouped.set(root, members);
+    }
+    geometry.userData["editFaceGroups"] = [...grouped.values()].map((members) => [...members]);
   }
 
   const faces: MeshFaceGroup[] = [];
