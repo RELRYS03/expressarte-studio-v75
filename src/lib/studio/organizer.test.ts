@@ -33,7 +33,7 @@ describe("organizador paramétrico", () => {
     try {
       expect(walls.boundingBox).not.toBeNull();
       expect(base.boundingBox).not.toBeNull();
-      expect(walls.boundingBox!.getSize({ x: 0, y: 0, z: 0 } as never).z).toBeCloseTo(40);
+      expect(walls.boundingBox!.max.z - walls.boundingBox!.min.z).toBeCloseTo(40);
       expect(base.boundingBox!.max.z - base.boundingBox!.min.z).toBeCloseTo(2.4);
       expect(walls.boundingBox!.max.x - walls.boundingBox!.min.x).toBeCloseTo(220);
       expect(walls.boundingBox!.max.y - walls.boundingBox!.min.y).toBeCloseTo(140);
