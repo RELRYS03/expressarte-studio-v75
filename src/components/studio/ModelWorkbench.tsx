@@ -5,7 +5,7 @@ import {
   Box, Circle, Cylinder, Cone, Torus, Move, RotateCw, Scaling, MousePointer2,
   Layers3, Grid3X3, Download, Upload, Undo2, Redo2, Trash2, Copy, Eye, EyeOff,
   Plus, Save, X, ChevronDown, Wrench, Settings2, HelpCircle, Maximize2,
-  FolderOpen, Palette, Ruler, Scissors, Combine, Split, Mirror, Lock,
+  FolderOpen, Palette, Ruler, Scissors, Combine, Split, FlipHorizontal2, Lock,
   CheckCircle2, TriangleAlert, RotateCcw, PanelRight, Sparkles,
 } from "lucide-react";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -96,7 +96,7 @@ export default function ModelWorkbench() {
     setRows(api.objects.map((mesh) => ({
       id: mesh.uuid,
       name: mesh.name,
-      type: String(mesh.userData.primitive ?? "malha"),
+      type: String(mesh.userData["primitive"] ?? "malha"),
       visible: mesh.visible,
     })));
   }, []);
@@ -288,7 +288,7 @@ export default function ModelWorkbench() {
     const api = sceneRef.current;
     if (!api) return;
     const mesh = createPrimitive(kind);
-    const sameKindCount = api.objects.filter((item) => item.userData.primitive === kind).length;
+    const sameKindCount = api.objects.filter((item) => item.userData["primitive"] === kind).length;
     if (sameKindCount > 0) mesh.name = `${mesh.name}.${String(sameKindCount + 1).padStart(3, "0")}`;
     mesh.position.x = api.objects.length * 7;
     api.objects.push(mesh);
@@ -375,7 +375,9 @@ export default function ModelWorkbench() {
     const history = historyRef.current;
     const nextIndex = history.index + direction;
     if (!api || nextIndex < 0 || nextIndex >= history.entries.length) return;
-    const state = JSON.parse(history.entries[nextIndex]) as { objects: object[]; selected: string | null };
+    const serialized = history.entries[nextIndex];
+    if (!serialized) return;
+    const state = JSON.parse(serialized) as { objects: object[]; selected: string | null };
     api.transform.detach();
     api.objects.forEach((mesh) => {
       api.scene.remove(mesh);
@@ -546,7 +548,7 @@ export default function ModelWorkbench() {
           <button className="future" disabled title="Ainda não implementado"><Layers3 /><span>Inset / Bevel</span><Lock size={12}/></button>
           <button className="future" disabled title="Ainda não implementado"><Combine /><span>Booleano</span><Lock size={12}/></button>
           <button className="future" disabled title="Ainda não implementado"><Split /><span>Dividir</span><Lock size={12}/></button>
-          <button className="future" disabled title="Ainda não implementado"><Mirror /><span>Espelhar</span><Lock size={12}/></button>
+          <button className="future" disabled title="Ainda não implementado"><FlipHorizontal2 /><span>Espelhar</span><Lock size={12}/></button>
           <button className="future" disabled title="Ainda não implementado"><Wrench /><span>Reparar malha</span><Lock size={12}/></button>
           <div className="mw-rail-footer"><CheckCircle2 size={14}/> Object Mode ativo</div>
         </aside>
