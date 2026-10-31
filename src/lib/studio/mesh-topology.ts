@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, InterleavedBufferAttribute, Vector3 } from "three";
+import { BufferAttribute, BufferGeometry, InterleavedBufferAttribute, Matrix4, Vector3 } from "three";
 
 const WELD_EPSILON = 1e-5;
 const PLANAR_DOT = 0.9995;
@@ -204,6 +204,33 @@ export function createFaceGroupGeometry(geometry: BufferGeometry, triangleIndex:
   const result = new BufferGeometry();
   result.setAttribute("position", new BufferAttribute(new Float32Array(vertices), 3));
   return finalize(result);
+}
+
+
+export type VertexPositionSnapshot = { id: number; local: readonly [number, number, number] };
+
+/** Applies a world-space gizmo delta to selected vertices, based on their drag-start positions. */
+export function applyWorldDeltaToVertices(
+  geometry: BufferGeometry,
+  snapshots: readonly VertexPositionSnapshot[],
+  meshWorldMatrix: Matrix4,
+  worldDelta: Matrix4,
+) {
+  const position = geometry.getAttribute("position");
+  if (!position) throw new Error("A malha não possui posições editáveis.");
+  const inverseMesh = meshWorldMatrix.clone().invert();
+  for (const snapshot of snapshots) {
+    if (snapshot.id < 0 || snapshot.id >= position.count) {
+      throw new Error("A seleção contém um vértice que não existe mais.");
+    }
+    const local = new Vector3(...snapshot.local);
+    const transformed = local.applyMatrix4(meshWorldMatrix).applyMatrix4(worldDelta).applyMatrix4(inverseMesh);
+    position.setXYZ(snapshot.id, transformed.x, transformed.y, transformed.z);
+  }
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
 }
 
 export type ExtrudeFaceResult = { geometry: BufferGeometry; capTriangleIndex: number };
