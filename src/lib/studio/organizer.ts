@@ -41,10 +41,7 @@ function roundedRectangle(
 
   if (clockwise) {
     path.moveTo(left + r, bottom);
-    path.lineTo(left, bottom + r);
-    path.quadraticCurveTo(left, bottom, left + r, bottom);
-    path.lineTo(left + r, bottom);
-    path.lineTo(left, bottom + r);
+    path.quadraticCurveTo(left, bottom, left, bottom + r);
     path.lineTo(left, top - r);
     path.quadraticCurveTo(left, top, left + r, top);
     path.lineTo(right - r, top);
