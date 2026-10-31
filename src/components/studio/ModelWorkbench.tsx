@@ -159,7 +159,7 @@ export default function ModelWorkbench() {
 
     const transform = new TransformControls(camera, renderer.domElement);
     transform.setMode("translate");
-    transform.setSpace("global");
+    transform.setSpace("world");
     transform.setSize(0.9);
     scene.add(transform.getHelper());
 
