@@ -41,7 +41,7 @@ export function createPrimitive(kind: PrimitiveKind): THREE.Mesh {
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = labels[kind];
-  mesh.userData.primitive = kind;
+  mesh.userData["primitive"] = kind;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   if (kind === "plane") mesh.rotation.x = -Math.PI / 2;
