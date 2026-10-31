@@ -965,7 +965,8 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     </>
   );
   const pricing = calculatePricing(cost);
-  if (page === "studio") return <ModelWorkbench />;
+  const requestedPage = page as string;
+  if (requestedPage === "studio") return <ModelWorkbench />;
   return (
     <>
     <div inert={solidBusy} style={{ display: "contents" }}>
