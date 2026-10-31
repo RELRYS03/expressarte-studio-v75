@@ -12,7 +12,7 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import { createPrimitive, type PrimitiveKind } from "@/lib/studio/workbench-primitives";
-import { buildMeshTopology, createFaceGroupGeometry, extrudePlanarFace, weldGeometry, type MeshEdge } from "@/lib/studio/mesh-topology";
+import { applyWorldDeltaToVertices, buildMeshTopology, createFaceGroupGeometry, extrudePlanarFace, weldGeometry, type MeshEdge, type VertexPositionSnapshot } from "@/lib/studio/mesh-topology";
 import "./model-workbench.css";
 
 type Tool = "select" | "translate" | "rotate" | "scale";
@@ -27,6 +27,7 @@ type Inspector = {
   color: string;
 };
 type SceneRow = { id: string; name: string; type: string; visible: boolean };
+type EditDragSnapshot = { pivotMatrix: THREE.Matrix4; vertices: VertexPositionSnapshot[] };
 type SceneApi = {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -40,6 +41,8 @@ type SceneApi = {
   editMode: boolean;
   selectionMode: EditSelectionMode;
   editSelection: EditSelection;
+  editPivot: THREE.Object3D;
+  editDragStart: EditDragSnapshot | null;
   editOverlays: THREE.Object3D[];
 };
 type HistoryState = { entries: string[]; index: number };
@@ -147,6 +150,34 @@ function refreshEditOverlays(api: SceneApi) {
   }
 }
 
+
+function positionEditPivot(api: SceneApi, tool: Tool) {
+  const mesh = api.selected;
+  const pivot = api.editPivot;
+  if (!api.editMode || !mesh || tool === "select") {
+    api.transform.detach();
+    return;
+  }
+  const ids = selectedEditVertexIds(mesh, api.selectionMode, api.editSelection);
+  if (!ids.length) {
+    api.transform.detach();
+    return;
+  }
+  const position = mesh.geometry.getAttribute("position");
+  const center = new THREE.Vector3();
+  ids.forEach((id) => center.add(new THREE.Vector3().fromBufferAttribute(position, id)));
+  center.multiplyScalar(1 / ids.length);
+  mesh.updateMatrixWorld(true);
+  mesh.localToWorld(center);
+  pivot.position.copy(center);
+  pivot.quaternion.identity();
+  pivot.scale.set(1, 1, 1);
+  pivot.updateMatrixWorld(true);
+  api.transform.setMode(tool);
+  api.transform.setSpace("world");
+  api.transform.attach(pivot);
+}
+
 function distanceToSegment(point: THREE.Vector3, start: THREE.Vector3, end: THREE.Vector3) {
   const segment = end.clone().sub(start);
   const lengthSquared = segment.lengthSq();
@@ -203,6 +234,7 @@ export default function ModelWorkbench() {
       setEditSelectionCount(0);
       api.transform.detach();
       refreshEditOverlays(api);
+      positionEditPivot(api, tool);
     } else if (mesh && tool !== "select") api.transform.attach(mesh);
     else api.transform.detach();
     setSelectedId(mesh?.uuid ?? null);
@@ -268,8 +300,11 @@ export default function ModelWorkbench() {
       editMode: false,
       selectionMode: "face",
       editSelection: emptyEditSelection(),
+      editPivot: new THREE.Object3D(),
+      editDragStart: null,
       editOverlays: [],
     };
+    scene.add(api.editPivot);
     sceneRef.current = api;
 
     const snapshot = () => JSON.stringify({
@@ -295,6 +330,7 @@ export default function ModelWorkbench() {
         setEditSelectionCount(0);
         transform.detach();
         refreshEditOverlays(api);
+        positionEditPivot(api, toolRef.current);
       } else if (mesh && toolRef.current !== "select") transform.attach(mesh);
       else transform.detach();
       setSelectedId(mesh?.uuid ?? null);
@@ -334,37 +370,80 @@ export default function ModelWorkbench() {
         mesh.geometry.index?.getX(triangle * 3 + 2) ?? triangle * 3 + 2,
       ];
       api.selectionMode = selectionModeRef.current;
-      api.editSelection = emptyEditSelection();
+      if (!event.shiftKey) api.editSelection = emptyEditSelection();
       if (api.selectionMode === "vertex") {
         const nearest = vertices.map((id) => ({ id, distance: localPoint.distanceTo(new THREE.Vector3().fromBufferAttribute(position, id)) }))
           .sort((a, b) => a.distance - b.distance)[0];
-        if (nearest) api.editSelection.vertexIds = [nearest.id];
+        if (nearest) {
+          const selected = api.editSelection.vertexIds;
+          if (event.shiftKey && selected.includes(nearest.id)) {
+            api.editSelection.vertexIds = selected.filter((id) => id !== nearest.id);
+          } else if (!selected.includes(nearest.id)) {
+            api.editSelection.vertexIds = [...selected, nearest.id];
+          }
+        }
       } else if (api.selectionMode === "edge") {
         const candidates: MeshEdge[] = [[vertices[0]!, vertices[1]!], [vertices[1]!, vertices[2]!], [vertices[2]!, vertices[0]!]];
         const nearest = candidates.map((edge) => ({
           edge,
           distance: distanceToSegment(localPoint, new THREE.Vector3().fromBufferAttribute(position, edge[0]), new THREE.Vector3().fromBufferAttribute(position, edge[1])),
         })).sort((a, b) => a.distance - b.distance)[0];
-        if (nearest) api.editSelection.edgeIds = [nearest.edge];
+        if (nearest) {
+          const selected = api.editSelection.edgeIds;
+          const exists = selected.some(([a, b]) => a === nearest.edge[0] && b === nearest.edge[1]);
+          api.editSelection.edgeIds = event.shiftKey && exists
+            ? selected.filter(([a, b]) => a !== nearest.edge[0] || b !== nearest.edge[1])
+            : exists ? selected : [...selected, nearest.edge];
+        }
       } else {
         api.editSelection.faceTriangleIndex = triangle;
       }
       setEditSelectionCount(selectedEditVertexIds(mesh, api.selectionMode, api.editSelection).length);
       refreshEditOverlays(api);
-      api.transform.detach();
+      positionEditPivot(api, toolRef.current);
     };
     renderer.domElement.addEventListener("pointerdown", pointerDown);
 
     transform.addEventListener("dragging-changed", (event) => {
       orbit.enabled = !event.value;
     });
+    transform.addEventListener("mouseDown", () => {
+      const mesh = api.selected;
+      if (!api.editMode || !mesh || !api.transform.object) return;
+      const ids = selectedEditVertexIds(mesh, api.selectionMode, api.editSelection);
+      if (!ids.length) return;
+      const position = mesh.geometry.getAttribute("position");
+      api.editPivot.updateMatrixWorld(true);
+      api.editDragStart = {
+        pivotMatrix: api.editPivot.matrixWorld.clone(),
+        vertices: ids.map((id) => ({
+          id,
+          local: [position.getX(id), position.getY(id), position.getZ(id)] as const,
+        })),
+      };
+    });
     transform.addEventListener("objectChange", () => {
-      if (api.selected) {
-        syncInspector(api.selected);
-        if (api.editMode) refreshEditOverlays(api);
+      const mesh = api.selected;
+      const drag = api.editDragStart;
+      if (api.editMode && mesh && drag) {
+        api.scene.updateMatrixWorld(true);
+        api.editPivot.updateMatrixWorld(true);
+        const worldDelta = api.editPivot.matrixWorld.clone().multiply(drag.pivotMatrix.clone().invert());
+        applyWorldDeltaToVertices(mesh.geometry, drag.vertices, mesh.matrixWorld, worldDelta);
+        refreshEditOverlays(api);
+        syncInspector(mesh);
+      } else if (mesh) {
+        syncInspector(mesh);
       }
     });
-    transform.addEventListener("mouseUp", recordHistory);
+    transform.addEventListener("mouseUp", () => {
+      if (api.editMode && api.editDragStart && api.selected) {
+        api.editDragStart = null;
+        positionEditPivot(api, toolRef.current);
+        refreshEditOverlays(api);
+      }
+      recordHistory();
+    });
 
     const resize = () => {
       const width = host.clientWidth;
@@ -417,12 +496,13 @@ export default function ModelWorkbench() {
   useEffect(() => {
     const api = sceneRef.current;
     if (!api) return;
-    if (api.editMode || tool === "select") api.transform.detach();
+    if (api.editMode) positionEditPivot(api, tool);
+    else if (tool === "select") api.transform.detach();
     else {
       api.transform.setMode(tool);
       if (api.selected) api.transform.attach(api.selected);
     }
-  }, [tool]);
+  }, [tool, editMode]);
 
   useEffect(() => {
     const api = sceneRef.current;
@@ -440,7 +520,7 @@ export default function ModelWorkbench() {
     api.editSelection = emptyEditSelection();
     setEditSelectionCount(0);
     refreshEditOverlays(api);
-    api.transform.detach();
+    positionEditPivot(api, toolRef.current);
   };
 
   const toggleEditMode = () => {
@@ -477,6 +557,7 @@ export default function ModelWorkbench() {
     } else {
       api.editMode = false;
       api.editSelection = emptyEditSelection();
+      api.editDragStart = null;
       clearEditOverlays(api);
       api.transform.detach();
       setEditMode(false);
@@ -875,8 +956,7 @@ export default function ModelWorkbench() {
                     const mesh = api?.objects.find((item) => item.uuid === row.id) ?? null;
                     if (api && mesh) {
                       api.selected = mesh;
-                      if (tool === "select") api.transform.detach(); else api.transform.attach(mesh);
-                      setSelectedId(mesh.uuid); syncInspector(mesh);
+                      selectMesh(mesh);
                     }
                   }}><Box size={15}/><span>{row.name}</span></button>
                   <button className="mw-visibility" title={row.visible ? "Ocultar" : "Mostrar"} onClick={() => toggleVisibility(row.id)}>{row.visible ? <Eye size={14}/> : <EyeOff size={14}/>}</button>
