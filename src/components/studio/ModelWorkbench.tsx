@@ -290,7 +290,12 @@ export default function ModelWorkbench() {
 
     const choose = (mesh: THREE.Mesh | null) => {
       api.selected = mesh;
-      if (mesh && toolRef.current !== "select") transform.attach(mesh);
+      if (api.editMode) {
+        api.editSelection = emptyEditSelection();
+        setEditSelectionCount(0);
+        transform.detach();
+        refreshEditOverlays(api);
+      } else if (mesh && toolRef.current !== "select") transform.attach(mesh);
       else transform.detach();
       setSelectedId(mesh?.uuid ?? null);
       syncInspector(mesh);
@@ -319,7 +324,8 @@ export default function ModelWorkbench() {
       if (hit.faceIndex === undefined || hit.faceIndex === null) return;
       const triangle = hit.faceIndex;
       const topology = buildMeshTopology(mesh.geometry);
-      if (!topology.faceByTriangle[triangle] && topology.faceByTriangle[triangle] !== 0) return;
+      const groupId = topology.faceByTriangle[triangle];
+      if (groupId === undefined || groupId < 0) return;
       const localPoint = mesh.worldToLocal(hit.point.clone());
       const position = mesh.geometry.getAttribute("position");
       const vertices = [
@@ -597,6 +603,9 @@ export default function ModelWorkbench() {
     const serialized = history.entries[nextIndex];
     if (!serialized) return;
     const state = JSON.parse(serialized) as { objects: object[]; selected: string | null };
+    clearEditOverlays(api);
+    api.editSelection = emptyEditSelection();
+    setEditSelectionCount(0);
     api.transform.detach();
     api.objects.forEach((mesh) => {
       api.scene.remove(mesh);
