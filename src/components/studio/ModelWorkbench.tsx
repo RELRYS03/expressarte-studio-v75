@@ -616,7 +616,8 @@ export default function ModelWorkbench() {
     api.objects.forEach((mesh) => api.scene.add(mesh));
     const selected = api.objects.find((mesh) => mesh.uuid === state.selected) ?? api.objects.at(-1) ?? null;
     api.selected = selected;
-    if (selected && tool !== "select") api.transform.attach(selected);
+    if (api.editMode || tool === "select") api.transform.detach();
+    else if (selected) api.transform.attach(selected);
     setSelectedId(selected?.uuid ?? null);
     syncInspector(selected);
     refreshRows(api);
