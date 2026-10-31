@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, Vector3 } from "three";
+import { BufferAttribute, BufferGeometry, InterleavedBufferAttribute, Vector3 } from "three";
 
 const WELD_EPSILON = 1e-5;
 const PLANAR_DOT = 0.9995;
@@ -68,7 +68,7 @@ function edgeKey(a: number, b: number) {
   return a < b ? `${a}:${b}` : `${b}:${a}`;
 }
 
-function triangleNormal(position: BufferAttribute, a: number, b: number, c: number) {
+function triangleNormal(position: BufferAttribute | InterleavedBufferAttribute, a: number, b: number, c: number) {
   const pa = new Vector3().fromBufferAttribute(position, a);
   const pb = new Vector3().fromBufferAttribute(position, b);
   const pc = new Vector3().fromBufferAttribute(position, c);
