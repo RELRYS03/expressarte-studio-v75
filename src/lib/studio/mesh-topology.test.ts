@@ -83,6 +83,39 @@ describe("topologia e edição de malha", () => {
     geometry.dispose();
   });
 
+  it("preserva a identidade de uma face quadrilateral após deformar um vértice", () => {
+    const geometry = weldGeometry(new BoxGeometry(20, 20, 20));
+    const before = buildMeshTopology(geometry);
+    const face = before.faces[0]!;
+    const selectedId = face.vertexIndices[0]!;
+    const position = geometry.getAttribute("position");
+    const local = new Vector3().fromBufferAttribute(position, selectedId);
+
+    applyWorldDeltaToVertices(
+      geometry,
+      [{ id: selectedId, local: [local.x, local.y, local.z] }],
+      new Matrix4(),
+      new Matrix4().makeTranslation(0, 0, 3),
+    );
+
+    const after = buildMeshTopology(geometry);
+    const preservedFaceId = after.faceByTriangle[face.triangleIndices[0]!]!;
+    const preservedFace = after.faces[preservedFaceId]!;
+    expect(after.faces).toHaveLength(6);
+    expect(preservedFace.triangleIndices).toHaveLength(2);
+    expect(preservedFace.vertexIndices).toHaveLength(4);
+    expect(preservedFace.boundaryEdges).toHaveLength(4);
+
+    const rewelded = weldGeometry(geometry);
+    const afterReweld = buildMeshTopology(rewelded);
+    const reweldedFace = afterReweld.faces[afterReweld.faceByTriangle[face.triangleIndices[0]!]!]!;
+    expect(reweldedFace.vertexIndices).toHaveLength(4);
+    expect(reweldedFace.triangleIndices).toHaveLength(2);
+
+    geometry.dispose();
+    rewelded.dispose();
+  });
+
   it("extruda uma face inteira, cria paredes laterais e mantém o sólido fechado", () => {
     const source = new BoxGeometry(20, 20, 20);
     const welded = weldGeometry(source);
