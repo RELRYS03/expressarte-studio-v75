@@ -7,13 +7,17 @@ import {
   Plus, Save, X, ChevronDown, Wrench, Settings2, HelpCircle, Maximize2,
   FolderOpen, Palette, Ruler, Scissors, Combine, Split, FlipHorizontal2, Lock,
   CheckCircle2, TriangleAlert, RotateCcw, PanelRight, Sparkles,
+  CircleDot, Spline, Square, ArrowUpFromLine,
 } from "lucide-react";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import { createPrimitive, type PrimitiveKind } from "@/lib/studio/workbench-primitives";
+import { buildMeshTopology, createFaceGroupGeometry, extrudePlanarFace, weldGeometry, type MeshEdge } from "@/lib/studio/mesh-topology";
 import "./model-workbench.css";
 
 type Tool = "select" | "translate" | "rotate" | "scale";
+type EditSelectionMode = "vertex" | "edge" | "face";
+type EditSelection = { vertexIds: number[]; edgeIds: MeshEdge[]; faceTriangleIndex: number | null };
 type Inspector = {
   name: string;
   position: [number, number, number];
@@ -33,6 +37,10 @@ type SceneApi = {
   pointer: THREE.Vector2;
   objects: THREE.Mesh[];
   selected: THREE.Mesh | null;
+  editMode: boolean;
+  selectionMode: EditSelectionMode;
+  editSelection: EditSelection;
+  editOverlays: THREE.Object3D[];
 };
 type HistoryState = { entries: string[]; index: number };
 
@@ -70,6 +78,82 @@ function disposeMesh(mesh: THREE.Mesh) {
   materials.forEach((material) => material.dispose());
 }
 
+function emptyEditSelection(): EditSelection {
+  return { vertexIds: [], edgeIds: [], faceTriangleIndex: null };
+}
+
+function selectedEditVertexIds(mesh: THREE.Mesh, mode: EditSelectionMode, selection: EditSelection) {
+  if (mode === "vertex") return selection.vertexIds;
+  if (mode === "edge") return [...new Set(selection.edgeIds.flatMap(([a, b]) => [a, b]))];
+  if (selection.faceTriangleIndex === null) return [];
+  const topology = buildMeshTopology(mesh.geometry);
+  const group = topology.faces[topology.faceByTriangle[selection.faceTriangleIndex] ?? -1];
+  return group?.vertexIndices ?? [];
+}
+
+function clearEditOverlays(api: SceneApi) {
+  api.editOverlays.forEach((overlay) => {
+    api.scene.remove(overlay);
+    const item = overlay as THREE.Mesh | THREE.LineSegments | THREE.Points;
+    item.geometry.dispose();
+    (Array.isArray(item.material) ? item.material : [item.material]).forEach((material) => material.dispose());
+  });
+  api.editOverlays = [];
+}
+
+function refreshEditOverlays(api: SceneApi) {
+  clearEditOverlays(api);
+  const mesh = api.selected;
+  if (!api.editMode || !mesh) return;
+  mesh.updateMatrixWorld(true);
+  const addOverlay = (overlay: THREE.Object3D) => {
+    overlay.position.copy(mesh.position);
+    overlay.quaternion.copy(mesh.quaternion);
+    overlay.scale.copy(mesh.scale);
+    overlay.updateMatrixWorld(true);
+    api.scene.add(overlay);
+    api.editOverlays.push(overlay);
+  };
+
+  if (api.selectionMode === "face" && api.editSelection.faceTriangleIndex !== null) {
+    try {
+      const geometry = createFaceGroupGeometry(mesh.geometry, api.editSelection.faceTriangleIndex);
+      const overlay = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+        color: 0xffb347, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false,
+      }));
+      overlay.renderOrder = 20;
+      addOverlay(overlay);
+    } catch { /* Selection is cleared when the topology changes. */ }
+  } else if (api.selectionMode === "edge" && api.editSelection.edgeIds.length) {
+    const position = mesh.geometry.getAttribute("position");
+    const points: number[] = [];
+    api.editSelection.edgeIds.forEach(([a, b]) => {
+      points.push(position.getX(a), position.getY(a), position.getZ(a), position.getX(b), position.getY(b), position.getZ(b));
+    });
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
+    const overlay = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0xffb347, depthTest: false }));
+    overlay.renderOrder = 21;
+    addOverlay(overlay);
+  } else if (api.selectionMode === "vertex" && api.editSelection.vertexIds.length) {
+    const position = mesh.geometry.getAttribute("position");
+    const points: number[] = [];
+    api.editSelection.vertexIds.forEach((id) => points.push(position.getX(id), position.getY(id), position.getZ(id)));
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
+    const overlay = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xffb347, size: 11, sizeAttenuation: false, depthTest: false }));
+    overlay.renderOrder = 22;
+    addOverlay(overlay);
+  }
+}
+
+function distanceToSegment(point: THREE.Vector3, start: THREE.Vector3, end: THREE.Vector3) {
+  const segment = end.clone().sub(start);
+  const lengthSquared = segment.lengthSq();
+  const t = lengthSquared === 0 ? 0 : THREE.MathUtils.clamp(point.clone().sub(start).dot(segment) / lengthSquared, 0, 1);
+  return point.distanceTo(start.clone().addScaledVector(segment, t));
+}
+
 export default function ModelWorkbench() {
   const hostRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SceneApi | null>(null);
@@ -80,6 +164,11 @@ export default function ModelWorkbench() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [inspector, setInspector] = useState<Inspector | null>(null);
   const [tool, setTool] = useState<Tool>("translate");
+  const [editMode, setEditMode] = useState(false);
+  const [selectionMode, setSelectionMode] = useState<EditSelectionMode>("face");
+  const [editSelectionCount, setEditSelectionCount] = useState(0);
+  const [extrudeDistance, setExtrudeDistance] = useState("5");
+  const selectionModeRef = useRef<EditSelectionMode>("face");
   const toolRef = useRef<Tool>("translate");
   toolRef.current = tool;
   const [notice, setNotice] = useState("");
@@ -109,7 +198,12 @@ export default function ModelWorkbench() {
     const api = sceneRef.current;
     if (!api) return;
     api.selected = mesh;
-    if (mesh && tool !== "select") api.transform.attach(mesh);
+    if (api.editMode) {
+      api.editSelection = emptyEditSelection();
+      setEditSelectionCount(0);
+      api.transform.detach();
+      refreshEditOverlays(api);
+    } else if (mesh && tool !== "select") api.transform.attach(mesh);
     else api.transform.detach();
     setSelectedId(mesh?.uuid ?? null);
     syncInspector(mesh);
@@ -171,6 +265,10 @@ export default function ModelWorkbench() {
       pointer: new THREE.Vector2(),
       objects: [],
       selected: null,
+      editMode: false,
+      selectionMode: "face",
+      editSelection: emptyEditSelection(),
+      editOverlays: [],
     };
     sceneRef.current = api;
 
@@ -207,8 +305,47 @@ export default function ModelWorkbench() {
         -((event.clientY - rect.top) / rect.height) * 2 + 1,
       );
       api.raycaster.setFromCamera(api.pointer, camera);
-      const hit = api.raycaster.intersectObjects(api.objects, false)[0];
-      choose(hit?.object instanceof THREE.Mesh ? hit.object : null);
+      const hit = api.raycaster.intersectObjects(api.objects.filter((item) => item.visible), false)[0];
+      if (!(hit?.object instanceof THREE.Mesh)) {
+        if (!api.editMode) choose(null);
+        return;
+      }
+      if (!api.editMode) {
+        choose(hit.object);
+        return;
+      }
+      if (hit.object !== api.selected) choose(hit.object);
+      const mesh = hit.object;
+      if (hit.faceIndex === undefined || hit.faceIndex === null) return;
+      const triangle = hit.faceIndex;
+      const topology = buildMeshTopology(mesh.geometry);
+      if (!topology.faceByTriangle[triangle] && topology.faceByTriangle[triangle] !== 0) return;
+      const localPoint = mesh.worldToLocal(hit.point.clone());
+      const position = mesh.geometry.getAttribute("position");
+      const vertices = [
+        mesh.geometry.index?.getX(triangle * 3) ?? triangle * 3,
+        mesh.geometry.index?.getX(triangle * 3 + 1) ?? triangle * 3 + 1,
+        mesh.geometry.index?.getX(triangle * 3 + 2) ?? triangle * 3 + 2,
+      ];
+      api.selectionMode = selectionModeRef.current;
+      api.editSelection = emptyEditSelection();
+      if (api.selectionMode === "vertex") {
+        const nearest = vertices.map((id) => ({ id, distance: localPoint.distanceTo(new THREE.Vector3().fromBufferAttribute(position, id)) }))
+          .sort((a, b) => a.distance - b.distance)[0];
+        if (nearest) api.editSelection.vertexIds = [nearest.id];
+      } else if (api.selectionMode === "edge") {
+        const candidates: MeshEdge[] = [[vertices[0]!, vertices[1]!], [vertices[1]!, vertices[2]!], [vertices[2]!, vertices[0]!]];
+        const nearest = candidates.map((edge) => ({
+          edge,
+          distance: distanceToSegment(localPoint, new THREE.Vector3().fromBufferAttribute(position, edge[0]), new THREE.Vector3().fromBufferAttribute(position, edge[1])),
+        })).sort((a, b) => a.distance - b.distance)[0];
+        if (nearest) api.editSelection.edgeIds = [nearest.edge];
+      } else {
+        api.editSelection.faceTriangleIndex = triangle;
+      }
+      setEditSelectionCount(selectedEditVertexIds(mesh, api.selectionMode, api.editSelection).length);
+      refreshEditOverlays(api);
+      api.transform.detach();
     };
     renderer.domElement.addEventListener("pointerdown", pointerDown);
 
@@ -216,7 +353,10 @@ export default function ModelWorkbench() {
       orbit.enabled = !event.value;
     });
     transform.addEventListener("objectChange", () => {
-      if (api.selected) syncInspector(api.selected);
+      if (api.selected) {
+        syncInspector(api.selected);
+        if (api.editMode) refreshEditOverlays(api);
+      }
     });
     transform.addEventListener("mouseUp", recordHistory);
 
@@ -250,6 +390,7 @@ export default function ModelWorkbench() {
       cancelAnimationFrame(frame);
       observer.disconnect();
       renderer.domElement.removeEventListener("pointerdown", pointerDown);
+      clearEditOverlays(api);
       transform.detach();
       transform.dispose();
       orbit.dispose();
@@ -270,7 +411,7 @@ export default function ModelWorkbench() {
   useEffect(() => {
     const api = sceneRef.current;
     if (!api) return;
-    if (tool === "select") api.transform.detach();
+    if (api.editMode || tool === "select") api.transform.detach();
     else {
       api.transform.setMode(tool);
       if (api.selected) api.transform.attach(api.selected);
@@ -283,6 +424,84 @@ export default function ModelWorkbench() {
     const grid = api.scene.children.find((child) => child instanceof THREE.GridHelper);
     if (grid) grid.visible = showGrid;
   }, [showGrid]);
+
+  const changeSelectionMode = (mode: EditSelectionMode) => {
+    const api = sceneRef.current;
+    selectionModeRef.current = mode;
+    setSelectionMode(mode);
+    if (!api) return;
+    api.selectionMode = mode;
+    api.editSelection = emptyEditSelection();
+    setEditSelectionCount(0);
+    refreshEditOverlays(api);
+    api.transform.detach();
+  };
+
+  const toggleEditMode = () => {
+    const api = sceneRef.current;
+    if (!api?.selected) {
+      notify("Adicione ou selecione um objeto antes de entrar no Edit Mode.");
+      return;
+    }
+    if (!api.editMode) {
+      recordHistoryRef.current();
+      try {
+        const welded = weldGeometry(api.selected.geometry);
+        api.selected.geometry.dispose();
+        api.selected.geometry = welded;
+        const materials = Array.isArray(api.selected.material) ? api.selected.material : [api.selected.material];
+        materials.forEach((material) => {
+          if (material instanceof THREE.MeshStandardMaterial) {
+            material.flatShading = true;
+            material.needsUpdate = true;
+          }
+        });
+        api.editMode = true;
+        api.selectionMode = selectionModeRef.current;
+        api.editSelection = emptyEditSelection();
+        api.transform.detach();
+        setEditMode(true);
+        setEditSelectionCount(0);
+        refreshEditOverlays(api);
+        recordHistoryRef.current();
+        notify("Edit Mode ativo: selecione vértices, arestas ou faces.");
+      } catch (error) {
+        notify(error instanceof Error ? error.message : "Não foi possível entrar no Edit Mode.");
+      }
+    } else {
+      api.editMode = false;
+      api.editSelection = emptyEditSelection();
+      clearEditOverlays(api);
+      api.transform.detach();
+      setEditMode(false);
+      setEditSelectionCount(0);
+      if (toolRef.current !== "select") api.transform.attach(api.selected);
+      recordHistoryRef.current();
+      notify("Object Mode ativo.");
+    }
+  };
+
+  const extrudeSelectedFace = (distance = Number(extrudeDistance)) => {
+    const api = sceneRef.current;
+    const mesh = api?.selected;
+    if (!api || !mesh || !api.editMode || api.selectionMode !== "face" || api.editSelection.faceTriangleIndex === null) {
+      notify("Selecione uma face no Edit Mode para extrudar.");
+      return;
+    }
+    try {
+      const result = extrudePlanarFace(mesh.geometry, api.editSelection.faceTriangleIndex, distance);
+      mesh.geometry.dispose();
+      mesh.geometry = result.geometry;
+      api.editSelection = { vertexIds: [], edgeIds: [], faceTriangleIndex: result.capTriangleIndex };
+      setEditSelectionCount(selectedEditVertexIds(mesh, "face", api.editSelection).length);
+      refreshEditOverlays(api);
+      syncInspector(mesh);
+      recordHistoryRef.current();
+      notify(`Face extrudada em ${distance.toFixed(2)} mm.`);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível extrudar esta face.");
+    }
+  };
 
   const addPrimitive = (kind: PrimitiveKind) => {
     const api = sceneRef.current;
@@ -412,6 +631,11 @@ export default function ModelWorkbench() {
       const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0xb47b43, metalness: 0.15, roughness: 0.5 }));
       mesh.name = file.name.replace(/\.stl$/i, "");
       mesh.position.y = -geometry.boundingBox.min.y;
+      if (api.editMode) {
+        api.editMode = false;
+        setEditMode(false);
+        clearEditOverlays(api);
+      }
       api.objects.push(mesh);
       api.scene.add(mesh);
       selectMesh(mesh);
@@ -434,7 +658,13 @@ export default function ModelWorkbench() {
     try {
       const { STLExporter } = await import("three/examples/jsm/exporters/STLExporter.js");
       const group = new THREE.Group();
-      api.objects.filter((mesh) => mesh.visible).forEach((mesh) => group.add(mesh.clone()));
+      api.objects.filter((mesh) => mesh.visible).forEach((mesh) => {
+        const exported = new THREE.Mesh(mesh.geometry.clone(), mesh.material);
+        exported.position.copy(mesh.position);
+        exported.quaternion.copy(mesh.quaternion);
+        exported.scale.copy(mesh.scale);
+        group.add(exported);
+      });
       group.updateMatrixWorld(true);
       const result = new STLExporter().parse(group, { binary: true });
       const blob = result instanceof DataView
@@ -454,6 +684,8 @@ export default function ModelWorkbench() {
     }
   };
 
+  const apiEditMode = () => sceneRef.current?.editMode ?? false;
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -468,7 +700,14 @@ export default function ModelWorkbench() {
       } else if (event.shiftKey && key === "d") {
         event.preventDefault();
         duplicateSelected();
-      } else if (event.key === "Delete" || event.key === "Backspace") {
+      } else if (event.key === "Tab") {
+        event.preventDefault();
+        toggleEditMode();
+      } else if (apiEditMode() && key === "1") changeSelectionMode("vertex");
+      else if (apiEditMode() && key === "2") changeSelectionMode("edge");
+      else if (apiEditMode() && key === "3") changeSelectionMode("face");
+      else if (apiEditMode() && key === "e") { event.preventDefault(); extrudeSelectedFace(5); }
+      else if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
         deleteSelected();
       } else if (key === "g") setTool("translate");
@@ -478,7 +717,7 @@ export default function ModelWorkbench() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [deleteSelected, duplicateSelected, restoreHistory]);
+  }, [deleteSelected, duplicateSelected, restoreHistory, toggleEditMode, changeSelectionMode]);
 
   const selectedRow = rows.find((row) => row.id === selectedId);
   const canUndo = historyPosition.index > 0;
@@ -515,14 +754,23 @@ export default function ModelWorkbench() {
         <button onClick={() => addPrimitive("cube")}>Adicionar</button>
         <button onClick={duplicateSelected}>Objeto</button>
         <button onClick={() => setTool("translate")}>Modificar</button>
-        <button onClick={() => notify("Ferramentas de edição de malha entram na próxima etapa.")}>Malha</button>
+        <button onClick={toggleEditMode}>Malha</button>
         <button onClick={() => notify("Operações geométricas serão habilitadas sobre o núcleo de objetos.")}>Geometria</button>
         <button onClick={() => setShowGrid((value) => !value)}>Utilidades</button>
         <button onClick={() => notify("Atalhos: G mover · R girar · S escalar · Shift+D duplicar · Delete excluir.")}>Ajuda</button>
       </div>
 
       <div className="mw-toolbar">
-        <button className="mw-mode" title="Modo Objeto"><Box size={16} /> Modo: Objeto <ChevronDown size={14} /></button>
+        <button className={editMode ? "mw-mode active" : "mw-mode"} title="Alternar Object/Edit Mode (Tab)" onClick={toggleEditMode}><Box size={16} /> Modo: {editMode ? "Edição" : "Objeto"} <ChevronDown size={14} /></button>
+        {editMode && <>
+          <span className="mw-toolbar-divider" />
+          <button className={selectionMode === "vertex" ? "active" : ""} onClick={() => changeSelectionMode("vertex")} title="Vértices (1)"><CircleDot size={16}/> Vértice</button>
+          <button className={selectionMode === "edge" ? "active" : ""} onClick={() => changeSelectionMode("edge")} title="Arestas (2)"><Spline size={16}/> Aresta</button>
+          <button className={selectionMode === "face" ? "active" : ""} onClick={() => changeSelectionMode("face")} title="Faces (3)"><Square size={16}/> Face</button>
+          <span className="mw-toolbar-divider" />
+          <input className="mw-extrude-input" aria-label="Distância da extrusão em milímetros" type="number" min="0.01" max="1000" step="0.5" value={extrudeDistance} onChange={(event) => setExtrudeDistance(event.target.value)} />
+          <button className="mw-extrude-button" disabled={selectionMode !== "face" || editSelectionCount === 0} onClick={() => extrudeSelectedFace()} title="Extrudar face (E)"><ArrowUpFromLine size={15}/> Extrudar</button>
+        </>}
         <span className="mw-toolbar-divider" />
         <button className={tool === "select" ? "active" : ""} onClick={() => setTool("select")} title="Selecionar"><MousePointer2 size={17} /></button>
         <button className={tool === "translate" ? "active" : ""} onClick={() => setTool("translate")} title="Mover (G)"><Move size={17} /></button>
@@ -543,14 +791,21 @@ export default function ModelWorkbench() {
           <button className={tool === "rotate" ? "selected" : ""} onClick={() => setTool("rotate")}><RotateCw /> <span>Rotacionar (R)</span></button>
           <button className={tool === "scale" ? "selected" : ""} onClick={() => setTool("scale")}><Scaling /> <span>Escalar (S)</span></button>
           <div className="mw-tool-separator" />
-          <div className="mw-panel-title">Próxima etapa</div>
-          <button className="future" disabled title="Ainda não implementado"><Scissors /><span>Extrusão</span><Lock size={12}/></button>
-          <button className="future" disabled title="Ainda não implementado"><Layers3 /><span>Inset / Bevel</span><Lock size={12}/></button>
+          <div className="mw-panel-title">{editMode ? "Seleção de malha" : "Próxima etapa"}</div>
+          {editMode ? <>
+            <button className={selectionMode === "vertex" ? "selected" : ""} onClick={() => changeSelectionMode("vertex")}><CircleDot /><span>Vértices (1)</span></button>
+            <button className={selectionMode === "edge" ? "selected" : ""} onClick={() => changeSelectionMode("edge")}><Spline /><span>Arestas (2)</span></button>
+            <button className={selectionMode === "face" ? "selected" : ""} onClick={() => changeSelectionMode("face")}><Square /><span>Faces (3)</span></button>
+            <button disabled={selectionMode !== "face" || editSelectionCount === 0} onClick={() => extrudeSelectedFace()}><ArrowUpFromLine /><span>Extrudar (E)</span></button>
+          </> : <>
+            <button className="future" disabled title="Entre no Edit Mode para extrudar faces"><Scissors /><span>Extrusão</span><Lock size={12}/></button>
+            <button className="future" disabled title="Próxima implementação"><Layers3 /><span>Inset / Bevel</span><Lock size={12}/></button>
+          </>}
           <button className="future" disabled title="Ainda não implementado"><Combine /><span>Booleano</span><Lock size={12}/></button>
           <button className="future" disabled title="Ainda não implementado"><Split /><span>Dividir</span><Lock size={12}/></button>
           <button className="future" disabled title="Ainda não implementado"><FlipHorizontal2 /><span>Espelhar</span><Lock size={12}/></button>
           <button className="future" disabled title="Ainda não implementado"><Wrench /><span>Reparar malha</span><Lock size={12}/></button>
-          <div className="mw-rail-footer"><CheckCircle2 size={14}/> Object Mode ativo</div>
+          <div className="mw-rail-footer"><CheckCircle2 size={14}/> {editMode ? `Edit Mode · ${editSelectionCount} vértice(s)` : "Object Mode ativo"}</div>
         </aside>
 
         <section className="mw-viewport-panel">
@@ -572,7 +827,7 @@ export default function ModelWorkbench() {
           </div>
           <div className="mw-statusbar">
             <span><span className="mw-status-dot"/> {busy ? "Processando…" : "Pronto"}</span>
-            <span>{rows.length} objeto(s) · Unidade: mm</span>
+            <span>{editMode ? `Edit Mode · ${selectionMode === "vertex" ? "Vértices" : selectionMode === "edge" ? "Arestas" : "Faces"}` : "Object Mode"} · {rows.length} objeto(s) · mm</span>
             <span>{inspector ? `${inspector.dimensions.map((n) => n.toFixed(1)).join(" × ")} mm` : "Nenhum objeto selecionado"}</span>
           </div>
         </section>
