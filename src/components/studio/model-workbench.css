@@ -160,3 +160,33 @@
   .mw-workspace { min-width: 900px; min-height: 650px; }
   .mw-footer { min-width: 900px; }
 }
+
+.mw-extrude-input {
+  width: 76px;
+  height: 32px;
+  padding: 0 7px;
+  border: 1px solid #72502f;
+  border-radius: 5px;
+  outline: none;
+  background: #171a1f;
+  color: #f2c18b;
+  font-size: 11px;
+  text-align: right;
+}
+.mw-extrude-input:focus { border-color: #d38a3a; }
+.mw-extrude-button {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid #a86a2b !important;
+  border-radius: 5px;
+  background: #6e431d !important;
+  color: #ffe0ba !important;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mw-extrude-button:hover:not(:disabled) { background: #875421 !important; }
+.mw-extrude-button:disabled { opacity: .35; cursor: not-allowed; }
+.mw-tool-rail > button:disabled:not(.future) { opacity: .35; cursor: not-allowed; }
