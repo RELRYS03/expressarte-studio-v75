@@ -1,6 +1,6 @@
-import { BoxGeometry, BufferAttribute, BufferGeometry } from "three";
+import { BoxGeometry, BufferAttribute, BufferGeometry, Euler, Matrix4, Quaternion, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
-import { buildMeshTopology, extrudePlanarFace, weldGeometry } from "./mesh-topology";
+import { applyWorldDeltaToVertices, buildMeshTopology, extrudePlanarFace, weldGeometry } from "./mesh-topology";
 
 function signedVolume(geometry: BufferGeometry) {
   const position = geometry.getAttribute("position");
@@ -36,6 +36,35 @@ function expectClosed(geometry: BufferGeometry) {
 }
 
 describe("topologia e edição de malha", () => {
+  it("move somente os vértices selecionados usando o delta mundial do gizmo", () => {
+    const geometry = weldGeometry(new BoxGeometry(20, 20, 20));
+    const position = geometry.getAttribute("position");
+    const selectedId = 0;
+    const originalLocal = new Vector3().fromBufferAttribute(position, selectedId);
+    const untouchedLocal = new Vector3().fromBufferAttribute(position, 1);
+    const meshWorld = new Matrix4().compose(
+      new Vector3(10, 2, -3),
+      new Quaternion().setFromEuler(new Euler(0, Math.PI / 2, 0)),
+      new Vector3(2, 1, 1),
+    );
+    const delta = new Matrix4().makeTranslation(5, 0, 0);
+    const expectedWorld = originalLocal.clone().applyMatrix4(meshWorld).applyMatrix4(delta);
+
+    applyWorldDeltaToVertices(
+      geometry,
+      [{ id: selectedId, local: [originalLocal.x, originalLocal.y, originalLocal.z] }],
+      meshWorld,
+      delta,
+    );
+
+    const actualWorld = new Vector3().fromBufferAttribute(position, selectedId).applyMatrix4(meshWorld);
+    const actualUntouched = new Vector3().fromBufferAttribute(position, 1);
+    expect(actualWorld.distanceTo(expectedWorld)).toBeLessThan(1e-5);
+    expect(actualUntouched.distanceTo(untouchedLocal)).toBeLessThan(1e-6);
+    geometry.dispose();
+  });
+
+
   it("une vértices coincidentes de uma caixa e mantém 12 triângulos", () => {
     const source = new BoxGeometry(20, 20, 20);
     const welded = weldGeometry(source);
