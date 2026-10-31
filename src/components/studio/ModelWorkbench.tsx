@@ -80,6 +80,8 @@ export default function ModelWorkbench() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [inspector, setInspector] = useState<Inspector | null>(null);
   const [tool, setTool] = useState<Tool>("translate");
+  const toolRef = useRef<Tool>("translate");
+  toolRef.current = tool;
   const [notice, setNotice] = useState("");
   const [historyPosition, setHistoryPosition] = useState({ index: -1, length: 0 });
   const [showGrid, setShowGrid] = useState(true);
@@ -190,7 +192,7 @@ export default function ModelWorkbench() {
 
     const choose = (mesh: THREE.Mesh | null) => {
       api.selected = mesh;
-      if (mesh && tool !== "select") transform.attach(mesh);
+      if (mesh && toolRef.current !== "select") transform.attach(mesh);
       else transform.detach();
       setSelectedId(mesh?.uuid ?? null);
       syncInspector(mesh);
@@ -380,7 +382,7 @@ export default function ModelWorkbench() {
       disposeMesh(mesh);
     });
     const loader = new THREE.ObjectLoader();
-    api.objects = state.objects.map((data) => loader.parse(data) as THREE.Mesh);
+    api.objects = state.objects.map((data) => loader.parse(data as never) as THREE.Mesh);
     api.objects.forEach((mesh) => api.scene.add(mesh));
     const selected = api.objects.find((mesh) => mesh.uuid === state.selected) ?? api.objects.at(-1) ?? null;
     api.selected = selected;
@@ -449,6 +451,32 @@ export default function ModelWorkbench() {
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
+      const key = event.key.toLowerCase();
+      if (event.ctrlKey && key === "z") {
+        event.preventDefault();
+        restoreHistory(event.shiftKey ? 1 : -1);
+      } else if (event.ctrlKey && key === "y") {
+        event.preventDefault();
+        restoreHistory(1);
+      } else if (event.shiftKey && key === "d") {
+        event.preventDefault();
+        duplicateSelected();
+      } else if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        deleteSelected();
+      } else if (key === "g") setTool("translate");
+      else if (key === "r") setTool("rotate");
+      else if (key === "s") setTool("scale");
+      else if (event.key === "Escape") setTool("select");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [deleteSelected, duplicateSelected, restoreHistory]);
 
   const selectedRow = rows.find((row) => row.id === selectedId);
   const canUndo = historyPosition.index > 0;
