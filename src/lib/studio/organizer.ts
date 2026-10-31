@@ -112,8 +112,17 @@ export function createOrganizerParts(
     shell.holes.push(pocket);
   }
 
+  // Keep the floor slightly inside the outside wall faces so the boolean
+  // union does not have to resolve coincident coplanar outer surfaces.
   const baseShape = new Shape();
-  roundedRectangle(baseShape, 0, 0, width, length, cornerRadius);
+  roundedRectangle(
+    baseShape,
+    0,
+    0,
+    width - wall,
+    length - wall,
+    Math.max(0, cornerRadius - wall / 2),
+  );
 
   const walls = new ExtrudeGeometry(shell, {
     depth: height,
