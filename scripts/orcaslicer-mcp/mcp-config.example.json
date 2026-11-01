@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "expressarte-orcaslicer": {
+      "command": "node",
+      "args": [
+        "C:\\CAMINHO\\DO\\REPOSITORIO\\expressarte-studio-v75\\scripts\\orcaslicer-mcp\\server.mjs"
+      ],
+      "env": {
+        "ORCASLICER_EXE": "C:\\Program Files\\OrcaSlicer\\orca-slicer.exe"
+      }
+    }
+  }
+}
