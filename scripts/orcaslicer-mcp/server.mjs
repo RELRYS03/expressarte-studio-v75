@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { access, mkdir, readdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import * as z from "zod/v4";
@@ -273,5 +274,8 @@ server.registerTool(
   }
 );
 
-console.error("Express'Arte OrcaSlicer MCP iniciado (stdio).");
-await serveStdio(() => server);
+const isDirectExecution = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isDirectExecution) {
+  console.error("Express'Arte OrcaSlicer MCP iniciado (stdio).");
+  await serveStdio(() => server);
+}
