@@ -22,6 +22,10 @@ Para usar corte fechado e união booleana do Blender 5.2, abra também `INICIAR_
 
 O projeto não inclui `node_modules`, banco de dados, backend Python ou executável pré-compilado. Para publicar o site público gratuitamente no Cloudflare Workers, siga [`README_IMAGEM_PARA_3D.md`](README_IMAGEM_PARA_3D.md).
 
+## Integração local com OrcaSlicer via MCP (experimental)
+
+O servidor MCP local está em [`scripts/orcaslicer-mcp/README.md`](scripts/orcaslicer-mcp/README.md). Ele permite que um host MCP compatível verifique o OrcaSlicer, liste perfis, abra modelos e exporte 3MF após o fatiamento. **Não envia trabalhos à impressora.** A conexão direta entre o Studio no navegador e o processo local exige uma ponte HTTP adicional e ainda não está implementada.
+
 ## Funcionalidades entregues
 
 | Área | Estado nesta base |
