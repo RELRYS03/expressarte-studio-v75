@@ -59,6 +59,7 @@ export default function ModeloIAWorkshop() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [heightMm, setHeightMm] = useState(100);
   const [nativeHeight, setNativeHeight] = useState(0);
+  const [verticalAxis, setVerticalAxis] = useState<"y" | "z">("y");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("Importe um GLB para examinar materiais, peças e medidas. Nenhuma chamada de IA é feita nesta página.");
 
@@ -144,10 +145,13 @@ export default function ModeloIAWorkshop() {
       const raw = inspect(model);
       if (!raw.meshes || !raw.height || !Number.isFinite(raw.height) || !Number.isFinite(raw.width) || !Number.isFinite(raw.depth))
         throw new Error("O GLB não contém uma malha 3D mensurável.");
+      const vertical: "y" | "z" = raw.depth > raw.height ? "z" : "y";
+      const rawHeight = vertical === "z" ? raw.depth : raw.height;
+      if (!Number.isFinite(rawHeight) || rawHeight <= 0) throw new Error("Altura do modelo inválida.");
       const mmHeight = 100;
-      // A unidade implícita de GLB é metro, mas modelos de IA nem sempre preservam escala real.
+      // Eixo vertical inferido pela maior dimensão entre Y e Z; conferir no visor.
       // Nunca inferir uma altura física a partir do arquivo; o usuário fornece a altura desejada.
-      model.scale.multiplyScalar(mmHeight / raw.height);
+      model.scale.multiplyScalar(mmHeight / rawHeight);
       model.updateMatrixWorld(true);
       const previous = objectRef.current;
       if (previous && viewport.current) {
@@ -156,12 +160,13 @@ export default function ModeloIAWorkshop() {
       }
       objectRef.current = model;
       viewport.current?.scene.add(model);
-      setNativeHeight(raw.height);
+      setNativeHeight(rawHeight);
+      setVerticalAxis(vertical);
       setHeightMm(mmHeight);
       setStats(inspect(model));
       setFilename(file.name);
       focus(model);
-      setMessage("GLB carregado localmente. Altura inicial de trabalho: 100 mm (não é uma medida real inferida do Tripo). Verifique o tamanho e os materiais antes de exportar.");
+      setMessage(`GLB carregado. Eixo vertical estimado: ${vertical.toUpperCase()}. Altura de trabalho: 100 mm, definida para teste e não inferida do modelo real. Confira orientação e escala.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao importar o GLB.");
     } finally { setBusy(false); }
@@ -169,7 +174,7 @@ export default function ModeloIAWorkshop() {
   const resize = (next: number) => {
     const object = objectRef.current;
     if (!object || !nativeHeight || !Number.isFinite(next) || next < 20 || next > 300) return;
-    object.scale.setScalar(next / nativeHeight);
+    object.scale.multiplyScalar(next / heightMm);
     object.updateMatrixWorld(true);
     setHeightMm(next);
     setStats(inspect(object));
@@ -215,6 +220,7 @@ export default function ModeloIAWorkshop() {
             <strong>Diagnóstico geométrico básico</strong>
             <p>{stats.meshes.toLocaleString("pt-BR")} malhas · {Math.round(stats.triangles).toLocaleString("pt-BR")} triângulos · {stats.materials} materiais</p>
             <p>Dimensões de trabalho: {stats.width.toFixed(2)} × {stats.height.toFixed(2)} × {stats.depth.toFixed(2)} mm (X × Y × Z)</p>
+            <p>Eixo vertical estimado: {verticalAxis.toUpperCase()} · confirme a orientação antes de imprimir.</p>
             <p style={{fontSize:13}}>Este diagnóstico não verifica malha fechada, paredes finas nem colisões; a escala precisa ser validada.</p>
           </div>}
           <label style={{display:"grid",gap:8}}>
