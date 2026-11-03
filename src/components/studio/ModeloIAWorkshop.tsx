@@ -151,22 +151,33 @@ export default function ModeloIAWorkshop() {
       const mmHeight = 100;
       // Eixo vertical inferido pela maior dimensão entre Y e Z; conferir no visor.
       // Nunca inferir uma altura física a partir do arquivo; o usuário fornece a altura desejada.
-      model.scale.multiplyScalar(mmHeight / rawHeight);
-      model.updateMatrixWorld(true);
+      const oriented = new THREE.Group();
+      // Three.js usa Y como eixo vertical. Arquivos Z-up precisam ser girados antes de visualizar/exportar.
+      if (vertical === "z") model.rotation.x -= Math.PI / 2;
+      oriented.add(model);
+      oriented.updateMatrixWorld(true);
+      const preliminary = inspect(oriented);
+      if (!preliminary.height) throw new Error("Modelo sem altura após orientar.");
+      oriented.scale.multiplyScalar(mmHeight / preliminary.height);
+      oriented.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(oriented);
+      const center = box.getCenter(new THREE.Vector3());
+      oriented.position.set(-center.x, -box.min.y, -center.z);
+      oriented.updateMatrixWorld(true);
       const previous = objectRef.current;
       if (previous && viewport.current) {
         viewport.current.scene.remove(previous);
         disposeObject(previous);
       }
-      objectRef.current = model;
-      viewport.current?.scene.add(model);
-      setNativeHeight(rawHeight);
+      objectRef.current = oriented;
+      viewport.current?.scene.add(oriented);
+      setNativeHeight(preliminary.height);
       setVerticalAxis(vertical);
       setHeightMm(mmHeight);
-      setStats(inspect(model));
+      setStats(inspect(oriented));
       setFilename(file.name);
-      focus(model);
-      setMessage(`GLB carregado. Eixo vertical estimado: ${vertical.toUpperCase()}. Altura de trabalho: 100 mm, definida para teste e não inferida do modelo real. Confira orientação e escala.`);
+      focus(oriented);
+      setMessage(`GLB carregado. Eixo original estimado: ${vertical.toUpperCase()}, convertido para Y vertical na oficina. Altura de trabalho: 100 mm, definida para teste. Confira orientação e escala.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao importar o GLB.");
     } finally { setBusy(false); }
@@ -187,7 +198,7 @@ export default function ModeloIAWorkshop() {
       // STL não preserva cores, PBR, nem UV. Não corrigimos malha aberta automaticamente.
       const payload = new STLExporter().parse(object, { binary: true });
       save(new Blob([payload as BlobPart], { type: "model/stl" }), "ExpressArte-modelo-IA-" + Math.round(heightMm) + "mm.stl");
-      setMessage("STL exportado em milímetros de trabalho, sem textura. Valide malha, escala e fatiamento antes de imprimir.");
+      setMessage("STL exportado nas dimensões de trabalho, sem textura. STL não declara unidade: no Bambu Studio confirme milímetros, posição e fatiamento.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível exportar STL."); }
   };
   const exportGLB = async () => {
@@ -220,7 +231,7 @@ export default function ModeloIAWorkshop() {
             <strong>Diagnóstico geométrico básico</strong>
             <p>{stats.meshes.toLocaleString("pt-BR")} malhas · {Math.round(stats.triangles).toLocaleString("pt-BR")} triângulos · {stats.materials} materiais</p>
             <p>Dimensões de trabalho: {stats.width.toFixed(2)} × {stats.height.toFixed(2)} × {stats.depth.toFixed(2)} mm (X × Y × Z)</p>
-            <p>Eixo vertical estimado: {verticalAxis.toUpperCase()} · confirme a orientação antes de imprimir.</p>
+            <p>Eixo detectado no arquivo: {verticalAxis.toUpperCase()} · orientação convertida para Y vertical. Confirme visualmente antes de imprimir.</p>
             <p style={{fontSize:13}}>Este diagnóstico não verifica malha fechada, paredes finas nem colisões; a escala precisa ser validada.</p>
           </div>}
           <label style={{display:"grid",gap:8}}>
