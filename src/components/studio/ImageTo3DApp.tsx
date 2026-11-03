@@ -10,6 +10,7 @@ import {
   Users,
   Store,
   Stethoscope,
+  ClipboardCheck,
   Download,
   FileArchive,
   RotateCcw,
@@ -48,6 +49,7 @@ const menu = [
   { to: "/projetos", label: "Projetos", icon: FolderOpen },
   { to: "/calculadora", label: "Calculadora", icon: Calculator },
   { to: "/mesh-doctor", label: "Mesh Doctor", icon: Stethoscope },
+  { to: "/qa-studio", label: "QA Studio · Testes", icon: ClipboardCheck },
   { to: "/comunidade", label: "Comunidade", icon: Users },
 ] as const;
 const cards: { mode: ImageMode; title: string; description: string }[] = [
