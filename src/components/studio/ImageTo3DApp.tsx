@@ -539,6 +539,10 @@ export default function ImageTo3DApp() {
             <div className="preview-chip chip-bottom">STL · 3MF</div>
           </div>
         </section>
+        <section style={{margin:"24px auto",maxWidth:1180,padding:"16px 20px",border:"1px solid #927056",borderRadius:12,display:"flex",justifyContent:"space-between",gap:14,flexWrap:"wrap",alignItems:"center"}}>
+          <div><strong>Já criou um personagem no Tripo?</strong><p>Importe o GLB na nossa oficina e confira texturas, dimensões e exportação sem novos créditos.</p></div>
+          <Link to="/modelo-ia" className="nav-link">Abrir Oficina de Modelos IA →</Link>
+        </section>
         <section className="im3-tripo" aria-labelledby="tripo-title">
           <div className="im3-tripo-copy">
             <span className="im3-eyebrow">
