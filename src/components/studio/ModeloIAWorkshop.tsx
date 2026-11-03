@@ -206,9 +206,13 @@ export default function ModeloIAWorkshop() {
     if (!object) return;
     setBusy(true);
     try {
-      const output = await new GLTFExporter().parseAsync(object, { binary: true });
+      // glTF define a unidade linear em metros. Internamente usamos mm no editor.
+      const exportCopy = object.clone(true);
+      exportCopy.scale.multiplyScalar(0.001);
+      exportCopy.updateMatrixWorld(true);
+      const output = await new GLTFExporter().parseAsync(exportCopy, { binary: true });
       save(new Blob([output as BlobPart], { type: "model/gltf-binary" }), "ExpressArte-modelo-IA-editado.glb");
-      setMessage("Cópia GLB exportada. Esta operação preserva materiais compatíveis com glTF, mas não garante impressão 3D.");
+      setMessage("GLB exportado na escala padrão glTF (metros), correspondente à altura escolhida em mm. Materiais compatíveis preservados; impressão não garantida.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível exportar GLB."); }
     finally { setBusy(false); }
   };
