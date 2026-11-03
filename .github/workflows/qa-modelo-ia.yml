@@ -16,6 +16,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      # Build regenerates src/routeTree.gen.ts before the standalone typecheck.
+      - run: npm run build
       - run: npx tsc --noEmit
       - run: npm test -- --run
-      - run: npm run build
