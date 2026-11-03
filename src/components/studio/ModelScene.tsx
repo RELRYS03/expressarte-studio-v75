@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import { buildModel, disposeModel, sceneColor, type ModelConfig } from "@/lib/studio/model";
 export default function ModelScene({
   config,
@@ -22,6 +23,7 @@ export default function ModelScene({
     scene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
     controls: OrbitControls;
+    transform: TransformControls;
     model: THREE.Group | null;
   }>(null);
   useEffect(() => {
@@ -40,10 +42,24 @@ export default function ModelScene({
     element.appendChild(renderer.domElement);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    // Blender-like navigation: middle drag orbits, Shift+middle drag pans,
+    // right drag pans, and the wheel zooms. Left click stays free for selection.
+    controls.mouseButtons = {
+      LEFT: null as unknown as THREE.MOUSE,
+      MIDDLE: THREE.MOUSE.ROTATE,
+      RIGHT: THREE.MOUSE.PAN,
+    };
+    controls.enableZoom = true;
     controls.target.set(0, 5, 0);
     controls.minDistance = 80;
     controls.maxDistance = 5000;
     controls.maxPolarAngle = Math.PI * 0.51;
+    const transform = new TransformControls(camera, renderer.domElement);
+    const transformHelper = transform.getHelper();
+    scene.add(transformHelper);
+    transform.addEventListener("dragging-changed", (event) => {
+      controls.enabled = !event.value;
+    });
     scene.add(
       new THREE.HemisphereLight(0xfff7e9, 0x79604a, 2.4),
     );
@@ -71,7 +87,41 @@ export default function ModelScene({
     const grid = new THREE.GridHelper(1000, 100, sceneColor("--grid"), sceneColor("--grid"));
     grid.position.y = -0.7;
     scene.add(grid);
-    sceneRef.current = { scene, camera, controls, model: null };
+    sceneRef.current = { scene, camera, controls, transform, model: null };
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const setMiddleMouseMode = (event: PointerEvent) => {
+      if (event.button === 1) {
+        controls.mouseButtons.MIDDLE = event.shiftKey ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
+      }
+    };
+    // Run before OrbitControls sees the event, including when Shift is held.
+    renderer.domElement.addEventListener("pointerdown", setMiddleMouseMode, true);
+    const selectModel = (event: PointerEvent) => {
+      if (event.button !== 0 || transform.axis !== null) return;
+      const current = sceneRef.current;
+      if (!current?.model || !controls.enabled) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+      raycaster.setFromCamera(pointer, camera);
+      if (raycaster.intersectObject(current.model, true).length > 0) {
+        transform.attach(current.model);
+      } else {
+        transform.detach();
+      }
+    };
+    const changeTransformMode = (event: KeyboardEvent) => {
+      if (document.activeElement instanceof HTMLInputElement ||
+          document.activeElement instanceof HTMLTextAreaElement ||
+          (document.activeElement instanceof HTMLElement && document.activeElement.isContentEditable)) return;
+      if (!transform.object) return;
+      if (event.key.toLowerCase() === "g") transform.setMode("translate");
+      if (event.key.toLowerCase() === "r") transform.setMode("rotate");
+      if (event.key.toLowerCase() === "s") transform.setMode("scale");
+      if (event.key === "Escape") transform.detach();
+    };
+    renderer.domElement.addEventListener("pointerdown", selectModel);
+    window.addEventListener("keydown", changeTransformMode);
     const resize = () => {
       const w = element.clientWidth,
         h = element.clientHeight;
@@ -93,6 +143,12 @@ export default function ModelScene({
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      renderer.domElement.removeEventListener("pointerdown", setMiddleMouseMode, true);
+      renderer.domElement.removeEventListener("pointerdown", selectModel);
+      window.removeEventListener("keydown", changeTransformMode);
+      transform.detach();
+      scene.remove(transformHelper);
+      transform.dispose();
       controls.dispose();
       const current = sceneRef.current;
       if (current?.model) disposeModel(current.model);
@@ -109,6 +165,7 @@ export default function ModelScene({
     const current = sceneRef.current;
     if (!current) return;
     if (current.model) {
+      current.transform.detach();
       current.scene.remove(current.model);
       disposeModel(current.model);
     }
@@ -158,6 +215,6 @@ export default function ModelScene({
     controls.update();
   }, [view, zoom, reset, importedGeometry]);
   return (
-    <div className="scene-container" ref={host} aria-label="Modelo 3D interativo da medalha" />
+    <div className="scene-container" ref={host} aria-label="Cena 3D: clique esquerdo seleciona; botão do meio gira; Shift e botão do meio deslocam; roda aproxima; G move, R gira, S escala" />
   );
 }
