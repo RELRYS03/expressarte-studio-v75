@@ -8,6 +8,7 @@ import {
   Calculator,
   Users,
   Stethoscope,
+  ClipboardCheck,
   Plus,
   Download,
   Search,
@@ -64,7 +65,7 @@ import CatalogPage from "./CatalogPage";
 import CommunityPage from "./CommunityPage";
 const ModelScene = lazy(() => import("./ModelScene"));
 export type StudioPage =
-  "imagem" | "studio" | "formas" | "projetos" | "calculadora" | "mesh" | "comunidade" | "catalogo";
+  "imagem" | "studio" | "formas" | "projetos" | "calculadora" | "mesh" | "comunidade" | "catalogo" | "qa";
 const nav = [
   { to: "/", label: "Imagem para 3D", icon: ImageUp, page: "imagem" },
   { to: "/studio", label: "Studio 3D", icon: Box, page: "studio" },
@@ -73,6 +74,7 @@ const nav = [
   { to: "/projetos", label: "Meus projetos", icon: FolderOpen, page: "projetos" },
   { to: "/calculadora", label: "Calculadora", icon: Calculator, page: "calculadora" },
   { to: "/mesh-doctor", label: "Mesh Doctor", icon: Stethoscope, page: "mesh" },
+  { to: "/qa-studio", label: "QA Studio · Testes", icon: ClipboardCheck, page: "qa" },
   { to: "/comunidade", label: "Comunidade", icon: Users, page: "comunidade" },
 ] as const;
 const titles: Record<StudioPage, [string, string]> = {
@@ -86,6 +88,7 @@ const titles: Record<StudioPage, [string, string]> = {
   ],
   calculadora: ["Calculadora de impressão", "Materiais, energia e tempo de produção."],
   mesh: ["Mesh Doctor", "Inspeção de arquivos STL para impressão 3D."],
+  qa: ["QA Studio", "Testes e homologação de impressão 3D."],
   comunidade: ["Comunidade", "Seu mural local de ideias, projetos e publicações."],
 };
 function RangeField({
