@@ -28,7 +28,7 @@ export default function ModelScene({
     const element = host.current;
     if (!element) return;
     const scene = new THREE.Scene();
-    scene.background = sceneColor("--viewport");
+    scene.background = new THREE.Color("#34373e");
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 10000);
     camera.position.set(110, 135, 165);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -62,13 +62,13 @@ export default function ModelScene({
     scene.add(fill);
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(1500, 1500),
-      new THREE.MeshStandardMaterial({ color: sceneColor("--viewport"), roughness: 1 }),
+      new THREE.MeshStandardMaterial({ color: "#34373e", roughness: 1 }),
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.8;
     floor.receiveShadow = true;
     scene.add(floor);
-    const grid = new THREE.GridHelper(1000, 100, sceneColor("--grid"), sceneColor("--grid"));
+    const grid = new THREE.GridHelper(1000, 100, "#656971", "#50545d");
     grid.position.y = -0.7;
     scene.add(grid);
     sceneRef.current = { scene, camera, controls, model: null };
