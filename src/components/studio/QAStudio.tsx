@@ -8,6 +8,18 @@ type TestFile = { id: string; pr: string; name: string; kind: string; external: 
 type Data = { checks: Check[]; files: TestFile[] };
 const key = "expressarte-qa-v1";
 const definitions: { group: string; items: [string, string][] }[] = [
+  { group: "CAD · Precisão, medidas e encaixes", items: [
+    ["cad-cube", "Gerar cubo de calibração 20 × 20 × 20 mm e medir X/Y/Z no STL"],
+    ["cad-holes", "Gerar placa 60 × 30 × 4 mm com furos nominais Ø3, Ø5 e Ø8 mm"],
+    ["cad-fitting", "Criar pino macho Ø10 mm e furos fêmea Ø10,2 / Ø10,4 / Ø10,6 mm; comparar folgas diametrais"],
+    ["cad-walls", "Verificar paredes 1,2 / 2,0 / 3,0 mm e fundo de 2,4 mm"],
+    ["cad-box", "Medir organizador externo 220 × 140 × 40 mm e dimensão interna útil; registrar tolerância real"],
+    ["cad-units", "Confirmar unidades em milímetros após exportação STL e 3MF e reimportação"],
+    ["cad-topology", "Verificar malha fechada, bordas abertas e arestas não-manifold nas peças CAD"],
+    ["cad-slicer", "Fatiar no Bambu Studio A1 e comparar dimensões e alertas"],
+    ["cad-print", "Imprimir cupom de encaixe e medir com paquímetro os valores obtidos"],
+    ["cad-mobile", "Confirmar leitura e edição dos parâmetros CAD no Android"],
+  ]},
   { group: "PR 24 · Chaveiros e placas", items: [
     ["24-ci", "CI, testes de dimensões, TypeScript e build — anexar evidência"],
     ["24-circle", "Chaveiro circular Ø50 × 3 mm e furo Ø5 mm em STL real"],
