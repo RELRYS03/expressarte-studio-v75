@@ -8,6 +8,18 @@ type TestFile = { id: string; pr: string; name: string; kind: string; external: 
 type Data = { checks: Check[]; files: TestFile[] };
 const key = "expressarte-qa-v1";
 const definitions: { group: string; items: [string, string][] }[] = [
+  { group: "Imagem para 3D · Ensaios sem impressora", items: [
+    ["img-relevo", "Carregar PNG e SVG e gerar relevo 50 mm; conferir prévia e dimensões"],
+    ["img-silhueta", "Gerar silhueta 60 mm com fundo transparente; validar contorno e regiões soltas"],
+    ["img-litofania", "Gerar litofania 80 mm e verificar alturas mínimas/máximas"],
+    ["img-medal", "Gerar medalha 3D de imagem; inspecionar relevo e paleta 3MF"],
+    ["img-keychain", "Produzir chaveiro com imagem e furo Ø5 mm: implementação e teste ainda pendentes"],
+    ["img-manifold", "Verificar bordas abertas, não-manifold e valores numéricos dos modelos de imagem"],
+    ["img-export", "Exportar STL e 3MF e reabrir, conferindo unidades e escala em mm"],
+    ["img-mobile", "Testar controles de upload, prévia e exportação no Android"],
+    ["img-slicer", "Abrir os arquivos no Bambu Studio (sem precisar imprimir)"],
+    ["img-tripo", "Verificar integração Tripo/Meshy separadamente; não confundir imagem 2,5D com escultura 3D completa"],
+  ]},
   { group: "CAD · Precisão, medidas e encaixes", items: [
     ["cad-cube", "Gerar cubo de calibração 20 × 20 × 20 mm e medir X/Y/Z no STL"],
     ["cad-holes", "Gerar placa 60 × 30 × 4 mm com furos nominais Ø3, Ø5 e Ø8 mm"],
