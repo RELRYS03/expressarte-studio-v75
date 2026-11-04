@@ -66,3 +66,15 @@ npm run lint
 ```
 
 A versão distribuída inclui código-fonte e não contém um build de produção pré-validado neste ambiente. Leia `RELATORIO_V7_4.md` para limitações e verificações realizadas.
+
+
+## Expressinho 3D — ferramentas locais com Blender
+
+A rota `/expressinho` reúne o planejador inicial, geração local de chaveiros, auditoria STL e preparação de malhas.
+
+1. Instale Blender 5.2 e Python 3 no Windows.
+2. Se o Blender estiver no caminho padrão `C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe`, execute `scripts/INICIAR_BLENDER_BRIDGE_WINDOWS.bat`. Para outro local, defina `EXPRESSARTE_BLENDER_EXE`.
+3. Mantenha a janela da ponte aberta. Na página Expressinho, clique em **Verificar Blender local**.
+4. A ponte Expressinho escuta apenas em `127.0.0.1:8766`; o Mesh Workbench local é separado e usa `127.0.0.1:8767`.
+
+**Limites desta etapa:** geração geométrica real no Blender está disponível somente para chaveiros circulares e em coração, entre 30 e 150 mm. Os outros tipos geram um plano estruturado, não um modelo 3D final. Auditoria STL aceita até 20 MB; preparação aceita até 150 MB. A preparação oferece aparo do fundo ou redução de faces e não garante paredes, furos, manifold ou imprimibilidade. O arquivo original não é sobrescrito. Revise sempre o resultado no Bambu Studio antes de imprimir. Nenhuma chamada paga de IA é feita nesta etapa.
