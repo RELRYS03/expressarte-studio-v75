@@ -845,6 +845,7 @@ export default function ModelWorkbench() {
         <nav className="mw-modules" aria-label="Módulos do Studio">
           <span className="mw-module active"><Box size={16} /> Modelagem</span>
           <Link to="/studio">Criação guiada</Link>
+          <Link to="/expressinho"><Sparkles size={16} /> Expressinho</Link>
           <Link to="/">Imagem para 3D</Link>
           <Link to="/mesh-doctor">Mesh Doctor</Link>
           <Link to="/catalogo">Catálogo</Link>
