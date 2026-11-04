@@ -70,7 +70,7 @@ describe("keychain STL export regression", () => {
           expect(Array.from(loaded.getAttribute("position").array).every(Number.isFinite)).toBe(true);
           loaded.computeBoundingBox();
           const size = loaded.boundingBox!.getSize(new Vector3());
-          expect(size.x).toBeCloseTo(45, 3);
+          expect(size.x).toBeCloseTo(preset === "hex-keychain" ? 45 * Math.sqrt(3) / 2 : 45, 3);
           expect(size.z).toBeCloseTo(3, 3);
         } finally {
           loaded.dispose();
