@@ -92,7 +92,11 @@ export function createText3DGeometry(options: Text3DOptions): BufferGeometry {
   if (
     Math.abs(finalSize.x - widthMm) > 0.02 ||
     Math.abs(finalSize.z - depthMm) > 0.02 ||
-    ![...positions.array].every(Number.isFinite)
+    !Array.from({ length: positions.count }, (_, index) => [
+      positions.getX(index),
+      positions.getY(index),
+      positions.getZ(index),
+    ]).flat().every(Number.isFinite)
   ) {
     geometry.dispose();
     throw new Error("As dimensões calculadas do texto não passaram na validação.");
