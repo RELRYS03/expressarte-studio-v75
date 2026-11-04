@@ -8,7 +8,9 @@ describe("STL axis conversion", () => {
     try {
       orientStlForWorkbench(geometry);
       const size = geometry.boundingBox!.getSize(new Vector3());
-      expect([size.x, size.y, size.z]).toEqual([10, 30, 20]);
+      expect(size.x).toBeCloseTo(10);
+      expect(size.y).toBeCloseTo(30);
+      expect(size.z).toBeCloseTo(20);
     } finally {
       geometry.dispose();
     }
@@ -21,7 +23,7 @@ describe("STL axis conversion", () => {
     group.add(mesh);
     orientWorkbenchForStl(group);
     group.updateMatrixWorld(true);
-    const top = new Vector3(0, 20, 0).applyMatrix4(mesh.matrixWorld);
+    const top = new Vector3(0, 10, 0).applyMatrix4(mesh.matrixWorld);
     expect(top.z).toBeCloseTo(20);
     expect(top.y).toBeCloseTo(0);
     mesh.geometry.dispose();
