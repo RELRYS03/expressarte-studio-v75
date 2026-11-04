@@ -1,0 +1,21 @@
+name: QA Modelo IA
+on:
+  push:
+    branches: [feature/qa-studio-integrado, integration/studio-v7.5-candidate]
+  pull_request:
+    branches: [main, integration/studio-v7.5-candidate]
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx tsc --noEmit
+      - run: npm test -- --run
