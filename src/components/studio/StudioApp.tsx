@@ -75,10 +75,11 @@ import CatalogPage from "./CatalogPage";
 import CommunityPage from "./CommunityPage";
 const ModelScene = lazy(() => import("./ModelScene"));
 export type StudioPage =
-  "imagem" | "studio" | "formas" | "projetos" | "calculadora" | "mesh" | "comunidade" | "catalogo";
+  "imagem" | "studio" | "workbench" | "formas" | "projetos" | "calculadora" | "mesh" | "comunidade" | "catalogo";
 const nav = [
   { to: "/", label: "Imagem para 3D", icon: ImageUp, page: "imagem" },
   { to: "/studio", label: "Studio 3D", icon: Box, page: "studio" },
+  { to: "/workbench", label: "Editor avançado", icon: Box, page: "workbench" },
   { to: "/formas", label: "Formas", icon: Shapes, page: "formas" },
   { to: "/catalogo", label: "Catálogo", icon: Store, page: "catalogo" },
   { to: "/projetos", label: "Meus projetos", icon: FolderOpen, page: "projetos" },
@@ -89,6 +90,7 @@ const nav = [
 const titles: Record<StudioPage, [string, string]> = {
   imagem: ["Imagem para 3D", "Converta imagens em relevo, silhueta ou litofania."],
   studio: ["Studio 3D", "Sua ideia ganha forma. Crie, personalize e prepare para imprimir."],
+  workbench: ["Editor avançado", "Modelagem por objetos, transformações e edição de malha."],
   formas: ["Biblioteca de formas", "Escolha o ponto de partida da sua próxima criação."],
   projetos: ["Meus projetos", "Criações guardadas neste navegador, com backup JSON."],
   catalogo: [
@@ -1058,7 +1060,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     </>
   );
   const pricing = calculatePricing(cost);
-  if (String(page) === "studio") return <ModelWorkbench />;
+  if (page === "workbench") return <ModelWorkbench />;
   return (
     <>
     <div inert={solidBusy} style={{ display: "contents" }}>
