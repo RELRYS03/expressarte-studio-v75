@@ -27,7 +27,7 @@ export default function ExpressinhoHub() {
         kind: "error",
         message: error instanceof Error && error.message !== "Failed to fetch"
           ? error.message
-          : "Ponte local não encontrada. No Windows, execute scripts\\INICIAR_BLENDER_BRIDGE_WINDOWS.bat e tente novamente.",
+          : "Ponte local não encontrada. No Windows, execute scripts/INICIAR_BLENDER_BRIDGE_WINDOWS.bat e tente novamente.",
       });
     } finally {
       setChecking(false);
