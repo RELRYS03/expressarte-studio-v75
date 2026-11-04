@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { A1_BUILD_PLATE } from "@/lib/studio/build-plate";
+import { orientStlForWorkbench, orientWorkbenchForStl } from "@/lib/studio/stl-orientation";
 import { Link } from "@tanstack/react-router";
 import {
   Box, Circle, Cylinder, Cone, Torus, Move, RotateCw, Scaling, MousePointer2,
@@ -729,8 +730,7 @@ export default function ModelWorkbench() {
     setBusy(true);
     try {
       const { STLLoader } = await import("three/examples/jsm/loaders/STLLoader.js");
-      const geometry = new STLLoader().parse(await file.arrayBuffer());
-      geometry.computeVertexNormals();
+      const geometry = orientStlForWorkbench(new STLLoader().parse(await file.arrayBuffer()));
       geometry.computeBoundingBox();
       if (!geometry.boundingBox || geometry.getAttribute("position").count === 0) {
         geometry.dispose();
@@ -773,7 +773,7 @@ export default function ModelWorkbench() {
         exported.scale.copy(mesh.scale);
         group.add(exported);
       });
-      group.updateMatrixWorld(true);
+      orientWorkbenchForStl(group);
       const result = new STLExporter().parse(group, { binary: true });
       const blob = result instanceof DataView
         ? new Blob([new Uint8Array(result.buffer, result.byteOffset, result.byteLength)], { type: "model/stl" })
@@ -783,7 +783,7 @@ export default function ModelWorkbench() {
       anchor.href = url;
       anchor.download = "ExpressArte-ModelWorkbench.stl";
       anchor.click();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       notify("STL exportado. Abra no Bambu Studio e confira o fatiamento.");
     } catch (error) {
       notify(error instanceof Error ? error.message : "Falha ao exportar STL.");
