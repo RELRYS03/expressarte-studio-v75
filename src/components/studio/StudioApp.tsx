@@ -1,4 +1,5 @@
 import { editSolid, solidPositions } from "@/lib/studio/solid-mesh-client";
+import ModelWorkbench from "./ModelWorkbench";
 import { createStarterGeometry, type StarterPreset } from "@/lib/studio/starter-presets";
 import { geometryFromSvg } from "@/lib/studio/svg-geometry";
 import { placeRaisedLogo } from "@/lib/studio/logo-placement";
@@ -1057,6 +1058,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     </>
   );
   const pricing = calculatePricing(cost);
+  if (String(page) === "studio") return <ModelWorkbench />;
   return (
     <>
     <div inert={solidBusy} style={{ display: "contents" }}>
