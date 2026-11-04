@@ -78,7 +78,7 @@ def create(payload, output_stl, output_blend):
         if obj.dimensions.x > width*.70 and obj.dimensions.x>0:
             factor=width*.70/obj.dimensions.x
             obj.scale=(factor,factor,1)
-        obj.location=(0,0,depth+.15)
+        obj.location=(0,0,depth-.2)
     bpy.ops.wm.save_as_mainfile(filepath=output_blend)
     # STL de malhas; texto se converte somente na copia da cena usada para exportar.
     bpy.ops.object.select_all(action="SELECT")
