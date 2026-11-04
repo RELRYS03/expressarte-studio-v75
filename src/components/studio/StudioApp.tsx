@@ -1102,7 +1102,6 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   <span className="count">{shapes.length} formas</span>
                 </div>
                 {library}
-                <Text3DPanel disabled={busy || solidBusy} onCreate={createTextModel} />
                 <div className="library-footer">
                   <Layers size={12} />
                   Feitas para dar vida às suas ideias
@@ -1277,6 +1276,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   </fieldset>
                 ) : (
                   <>
+                    <Text3DPanel disabled={busy || solidBusy} onCreate={createTextModel} />
                     <div className="property-section">
                       <div className="section-label">
                         <Type />
