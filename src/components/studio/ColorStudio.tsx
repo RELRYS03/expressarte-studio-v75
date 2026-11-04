@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { closestCalibrations, correction, type Calibration } from "@/lib/studio/color-learning";
+import { closestCalibrations, correction, distance, type Calibration } from "@/lib/studio/color-learning";
 import { decodeImage } from "@/lib/studio/image3d";
 type Paint = { id: string; name: string; hex: string };
 type Recipe = { id: number; target: string; grams: number; ingredients: { name: string; grams: number }[]; note: string };
@@ -59,24 +59,23 @@ export default function ColorStudio() {
     const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     const sample = (sx: number, sy: number) => {
       const k = (Math.min(canvas.height-1,Math.max(0,sy))*canvas.width+Math.min(canvas.width-1,Math.max(0,sx)))*4;
-      return "#" + [px[k],px[k+1],px[k+2]].map(v=>v.toString(16).padStart(2,"0")).join("");
+      return "#" + [px[k]!,px[k+1]!,px[k+2]!].map(v=>v.toString(16).padStart(2,"0")).join("");
     };
     setTarget(sample(Math.floor(x*canvas.width),Math.floor(y*canvas.height)));
     const counts = new Map<string,number>();
     for(let py=0;py<canvas.height;py+=4) for(let pxx=0;pxx<canvas.width;pxx+=4) {
       const k=(py*canvas.width+pxx)*4;
-      if(px[k+3]<128)continue;
-      const q=[px[k],px[k+1],px[k+2]].map(v=>Math.min(255,Math.round(v/32)*32));
+      if(px[k+3]!<128)continue;
+      const q=[px[k]!,px[k+1]!,px[k+2]!].map(v=>Math.min(255,Math.round(v/32)*32));
       const key="#" + q.map(v=>v.toString(16).padStart(2,"0")).join("");
       counts.set(key,(counts.get(key)||0)+1);
     }
     setPalette([...counts].sort((a,b)=>b[1]-a[1]).slice(0,8).map(([c])=>c));
   };
-  const nearest = paints.map(p=>{
-    const rgb=(h:string)=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
-    const a=rgb(target),b=rgb(p.hex);
-    return {...p,distance:Math.sqrt(a.reduce((sum,v,i)=>sum+(v-b[i])**2,0))};
-  }).sort((a,b)=>a.distance-b.distance).slice(0,3);
+  const nearest = paints
+    .map((paint) => ({ ...paint, distance: distance(target, paint.hex) }))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 3);
   const readSample = async (file?: File) => {
     if (!file) return;
     setSampleError("");
@@ -98,14 +97,14 @@ export default function ColorStudio() {
     for(let yy=Math.max(0,y-2);yy<=Math.min(samplePixels.height-1,y+2);yy++)
       for(let xx=Math.max(0,x-2);xx<=Math.min(samplePixels.width-1,x+2);xx++){
         const offset=(yy*samplePixels.width+xx)*4;
-        if(samplePixels.rgba[offset+3]>=128)values.push(Array.from(samplePixels.rgba.slice(offset,offset+3)));
+        if(samplePixels.rgba[offset+3]!>=128)values.push(Array.from(samplePixels.rgba.slice(offset,offset+3)));
       }
     if(!values.length)return;
     const rgb=[0,1,2].map(channel=>{
-      const sorted=values.map(v=>v[channel]).sort((a,b)=>a-b);
-      return sorted[Math.floor(sorted.length/2)];
+      const sorted=values.map(v=>v[channel] ?? 0).sort((a,b)=>a-b);
+      return sorted[Math.floor(sorted.length/2)] ?? 0;
     });
-    setSampleHex("#"+rgb.map(v=>v.toString(16).padStart(2,"0")).join(""));
+    setSampleHex("#"+rgb.map(v=>(v ?? 0).toString(16).padStart(2,"0")).join(""));
   };
   const addPaint = () => {
     if (!name.trim()) return;
