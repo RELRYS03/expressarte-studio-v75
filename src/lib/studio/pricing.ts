@@ -24,14 +24,14 @@ export const defaultPricing: Pricing = {
   kwh: 0.9,
   machineValue: 0,
   machineLifeHours: 10000,
-  laborRate: 0,
-  manualHours: 0,
+  laborRate: 10,
+  manualHours: 0.5,
   supplies: 1.5,
   maintenance: 1,
   quantity: 1,
   failureRate: 0,
   fee: 0,
-  margin: 50,
+  margin: 30,
 };
 
 export function calculatePricing(c: Pricing) {
@@ -52,7 +52,8 @@ export function calculatePricing(c: Pricing) {
     Number.isInteger(c.quantity) &&
     quantity >= 1 &&
     (c.machineValue === 0 || c.machineLifeHours > 0) &&
-    c.fee < 100;
+    c.fee < 100 &&
+    c.failureRate <= 100;
 
   const salePrice = valid ? (cost * (1 + c.margin / 100)) / (1 - c.fee / 100) : null;
   const profit = salePrice === null ? null : salePrice * (1 - c.fee / 100) - cost;
