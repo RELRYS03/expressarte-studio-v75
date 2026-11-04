@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { Vector3 } from "three";
+import { Mesh, MeshBasicMaterial, Vector3 } from "three";
+import { STLExporter } from "three/examples/jsm/exporters/STLExporter.js";
 import { createText3DGeometry } from "./text-geometry";
 
 describe("text 3D geometry", () => {
@@ -33,6 +34,21 @@ describe("text 3D geometry", () => {
       expect(geometry.boundingBox!.getSize(new Vector3()).z).toBeCloseTo(2.4, 3);
     } finally {
       geometry.dispose();
+    }
+  });
+
+  it("exports the generated text as a valid non-empty binary STL", () => {
+    const geometry = createText3DGeometry({ text: "NOME TESTE", widthMm: 90, depthMm: 2.5 });
+    const material = new MeshBasicMaterial();
+    try {
+      const result = new STLExporter().parse(new Mesh(geometry, material), { binary: true });
+      const triangleCount = new DataView(result.buffer, result.byteOffset, result.byteLength).getUint32(80, true);
+      expect(result.byteLength).toBeGreaterThan(84);
+      expect(triangleCount).toBeGreaterThan(0);
+      expect(84 + triangleCount * 50).toBe(result.byteLength);
+    } finally {
+      geometry.dispose();
+      material.dispose();
     }
   });
 
