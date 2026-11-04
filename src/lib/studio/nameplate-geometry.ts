@@ -16,9 +16,6 @@ export type NameplateParts = {
   text: BufferGeometry;
 };
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
-
 /**
  * Builds a rounded plaque base and a raised text body with a deliberate
  * 0.2 mm overlap. The caller must boolean-union both bodies before export.
@@ -88,7 +85,7 @@ export function createNameplateParts(options: NameplateOptions): NameplateParts 
   let raisedText: BufferGeometry | undefined;
   try {
     const overlap = 0.2;
-    const availableWidth = width - 2 * Math.max(8, mountingHoles ? holeDiameter / 2 + 7 : 8);
+    const availableWidth = width - 2 * (mountingHoles ? Math.max(8, holeDiameter / 2 + 7) + holeDiameter / 2 + 2 : 8);
     const availableHeight = height * (mountingHoles ? 0.46 : 0.62);
     raisedText = createText3DGeometry({
       text,
