@@ -592,8 +592,15 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
         if (format === "stl") {
           const { STLExporter } = await import("three/examples/jsm/exporters/STLExporter.js");
           const data = new STLExporter().parse(model, { binary: true });
+          // Binary STL: 80-byte header, 4-byte triangle count, 50 bytes per triangle.
+          const bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+          if (bytes.byteLength < 84) throw new Error("O STL gerado está incompleto.");
+          const triangleCount = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(80, true);
+          if (triangleCount === 0 || bytes.byteLength !== 84 + triangleCount * 50) {
+            throw new Error("O STL gerado não contém uma malha triangular válida.");
+          }
           downloadBlob(
-            new Blob([new Uint8Array(data.buffer)], { type: "application/sla" }),
+            new Blob([bytes], { type: "application/sla" }),
             imported
               ? `ExpressArte-${imported.name.replace(/\.stl$/i, "").replace(/[^a-zA-Z0-9_-]+/g, "-")}.stl`
               : "ExpressArte-medalha.stl",
@@ -618,8 +625,8 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       } finally {
         disposeModel(model);
       }
-    } catch {
-      notify("Não foi possível exportar o modelo. Tente novamente.");
+    } catch (error) {
+      notify(error instanceof Error ? `Falha ao exportar: ${error.message}` : "Não foi possível exportar o modelo.");
     } finally {
       setBusy(false);
     }
