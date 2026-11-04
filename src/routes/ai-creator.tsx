@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type ChangeEvent } from "react";
+import { generate3D } from "@/lib/ai-creator/client";
 
 type Mode = "text" | "image" | "both";
 const modes: { value: Mode; label: string }[] = [
@@ -14,6 +15,18 @@ function AICreator() {
   const [image, setImage] = useState<File | null>(null);
   const [height, setHeight] = useState(150);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ modelUrl: string; format: string } | null>(null);
+  const submit = async () => {
+    if (!valid || loading || !Number.isFinite(height) || height <= 0 || height > 1000) return;
+    setError(""); setResult(null); setLoading(true);
+    try {
+      const generated = await generate3D({ mode, prompt, image, heightMm: height });
+      setResult(generated);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível gerar o modelo.");
+    } finally { setLoading(false); }
+  };
   const needsImage = mode !== "text";
   const needsText = mode !== "image";
   const valid = (!needsImage || image !== null) && (!needsText || prompt.trim().length > 0);
@@ -66,12 +79,13 @@ function AICreator() {
             onChange={e => setHeight(Number(e.target.value))} />
         </label>
         {error && <p role="alert" className="text-red-600">{error}</p>}
-        <p className="text-sm text-muted-foreground">A geração por IA ainda não está conectada. Esta etapa prepara os dados para a futura integração com um provedor 3D. Nenhum arquivo é enviado.</p>
-        <button type="button" disabled={!valid || !Number.isFinite(height) || height <= 0 || height > 1000}
+        <p className="text-sm text-muted-foreground">O formulário enviará os dados ao servidor ao solicitar a geração. O motor 3D ainda precisa ser configurado; nenhuma chave de API deve ser colocada no navegador.</p>
+        <button type="button" disabled={loading || !valid || !Number.isFinite(height) || height <= 0 || height > 1000}
           className="rounded-lg bg-primary px-5 py-3 text-primary-foreground disabled:opacity-50"
-          onClick={() => setError("Configuração pronta. A geração 3D estará disponível após conectar e validar um motor de IA.")}>
-          Preparar criação
+          onClick={submit}>
+          {loading ? "Enviando para geração..." : "Gerar modelo 3D"}
         </button>
+        {result && <p role="status" className="text-sm">Modelo recebido ({result.format.toUpperCase()}): <a className="underline" href={result.modelUrl} download>Baixar arquivo gerado</a>. Verifique a malha antes de imprimir.</p>}
       </section>
     </main>
   );
