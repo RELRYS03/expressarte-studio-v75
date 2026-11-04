@@ -93,7 +93,7 @@ export default function Text3DPanel({ disabled = false, onCreate }: Text3DPanelP
         Gerar texto no editor
       </Button>
       <p className="text-[10px] leading-relaxed text-muted-foreground">
-        Geometria extrudada localmente, sem créditos. STL não guarda cores. A fonte atual ainda não inclui acentos.
+        Geometria local, sem créditos. STL não guarda cores; letras que não se tocam ficam como corpos separados. A fonte atual não inclui acentos.
       </p>
       {error && <p className="text-xs text-destructive" role="alert">{error}</p>}
     </section>
