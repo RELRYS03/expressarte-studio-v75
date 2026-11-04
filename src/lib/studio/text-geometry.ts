@@ -89,14 +89,21 @@ export function createText3DGeometry(options: Text3DOptions): BufferGeometry {
     throw new Error("Falha ao finalizar a geometria do texto.");
   }
   const finalSize = finalBounds.getSize(new Vector3());
+  let coordinatesAreFinite = true;
+  for (let index = 0; index < positions.count; index += 1) {
+    if (
+      !Number.isFinite(positions.getX(index)) ||
+      !Number.isFinite(positions.getY(index)) ||
+      !Number.isFinite(positions.getZ(index))
+    ) {
+      coordinatesAreFinite = false;
+      break;
+    }
+  }
   if (
     Math.abs(finalSize.x - widthMm) > 0.02 ||
     Math.abs(finalSize.z - depthMm) > 0.02 ||
-    !Array.from({ length: positions.count }, (_, index) => [
-      positions.getX(index),
-      positions.getY(index),
-      positions.getZ(index),
-    ]).flat().every(Number.isFinite)
+    !coordinatesAreFinite
   ) {
     geometry.dispose();
     throw new Error("As dimensões calculadas do texto não passaram na validação.");
