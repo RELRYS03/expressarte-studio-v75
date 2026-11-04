@@ -3,6 +3,7 @@ import { createStarterGeometry, type StarterPreset } from "@/lib/studio/starter-
 import { geometryFromSvg } from "@/lib/studio/svg-geometry";
 import { placeRaisedLogo } from "@/lib/studio/logo-placement";
 import { createLedChannelPart } from "@/lib/studio/led-channel";
+import Text3DPanel from "./Text3DPanel";
 import type { SolidOperation } from "@/lib/studio/solid-mesh";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
@@ -55,6 +56,7 @@ import {
   type ModelConfig,
 } from "@/lib/studio/model";
 import { ShapeIcon } from "./ShapeIcon";
+import Text3DPanel from "./Text3DPanel";
 import { useStudio } from "./StudioProvider";
 import { coerceConfig } from "@/lib/studio/persistence";
 import { defaultPricing, calculatePricing } from "@/lib/studio/pricing";
@@ -624,6 +626,24 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     setReset((v) => v + 1);
     notify("Modelo inicial criado. Personalize, corte ou exporte como STL.");
   };
+  const createTextModel = (geometry: BufferGeometry, filename: string) => {
+    if (busy || solidLock.current) {
+      geometry.dispose();
+      return;
+    }
+    setUndoGeometry((old) => {
+      old?.dispose();
+      return null;
+    });
+    setImported((old) => {
+      old?.geometry.dispose();
+      return { name: filename, geometry };
+    });
+    setView("3d");
+    setZoom(100);
+    setReset((value) => value + 1);
+    notify("Texto 3D criado. Exporte em STL e confira as letras e o fatiamento no Bambu Studio.");
+  };
   const applySvgLogo = async (file: File) => {
     if (!imported || busy || solidLock.current) return;
     if (!file.name.toLowerCase().endsWith(".svg") || file.size > 2_000_000) {
@@ -1083,6 +1103,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   <span className="count">{shapes.length} formas</span>
                 </div>
                 {library}
+                <Text3DPanel disabled={busy || solidBusy} onCreate={createTextModel} />
                 <div className="library-footer">
                   <Layers size={12} />
                   Feitas para dar vida às suas ideias
