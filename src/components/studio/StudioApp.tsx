@@ -3,7 +3,6 @@ import { createStarterGeometry, type StarterPreset } from "@/lib/studio/starter-
 import { geometryFromSvg } from "@/lib/studio/svg-geometry";
 import { placeRaisedLogo } from "@/lib/studio/logo-placement";
 import { createLedChannelPart } from "@/lib/studio/led-channel";
-import Text3DPanel from "./Text3DPanel";
 import type { SolidOperation } from "@/lib/studio/solid-mesh";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
