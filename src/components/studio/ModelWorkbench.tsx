@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { A1_BUILD_PLATE } from "@/lib/studio/build-plate";
 import { Link } from "@tanstack/react-router";
 import {
   Box, Circle, Cylinder, Cone, Torus, Move, RotateCw, Scaling, MousePointer2,
@@ -270,8 +271,22 @@ export default function ModelWorkbench() {
     fillLight.position.set(100, 45, -80);
     scene.add(fillLight);
 
-    const grid = new THREE.GridHelper(1000, 100, 0x444a53, 0x30353d);
-    grid.position.y = 0;
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(A1_BUILD_PLATE.widthMm, A1_BUILD_PLATE.depthMm),
+      new THREE.MeshStandardMaterial({ color: 0x20252b, roughness: 1, side: THREE.DoubleSide }),
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = A1_BUILD_PLATE.floorY;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const grid = new THREE.GridHelper(
+      A1_BUILD_PLATE.widthMm,
+      A1_BUILD_PLATE.gridDivisions,
+      0x66615a,
+      0x444a53,
+    );
+    grid.position.y = A1_BUILD_PLATE.gridY;
     scene.add(grid);
     const axes = new THREE.AxesHelper(38);
     axes.position.set(-0.01, 0.02, -0.01);
@@ -480,6 +495,8 @@ export default function ModelWorkbench() {
       transform.dispose();
       orbit.dispose();
       api.objects.forEach(disposeMesh);
+      floor.geometry.dispose();
+      (floor.material as THREE.Material).dispose();
       grid.geometry.dispose();
       const gridMaterials = Array.isArray(grid.material) ? grid.material : [grid.material];
       gridMaterials.forEach((material) => material.dispose());
@@ -823,17 +840,14 @@ export default function ModelWorkbench() {
         </Link>
         <nav className="mw-modules" aria-label="Módulos do Studio">
           <span className="mw-module active"><Box size={16} /> Modelagem</span>
-          <button onClick={() => notify("O módulo Organizadores será conectado ao Workbench na próxima etapa.")}>Organizadores</button>
-          <button onClick={() => notify("O módulo Chaveiros continuará disponível no fluxo de criação atual.")}>Chaveiros</button>
-          <button onClick={() => notify("O módulo Relevo continuará disponível no fluxo Imagem para 3D.")}>Relevo</button>
-          <Link to="/mesh-doctor">Reparo</Link>
-          <button onClick={() => notify("O Color Studio será integrado como painel de materiais.")}>Color Studio</button>
+          <Link to="/studio">Criação guiada</Link>
+          <Link to="/">Imagem para 3D</Link>
+          <Link to="/mesh-doctor">Mesh Doctor</Link>
           <Link to="/catalogo">Catálogo</Link>
         </nav>
         <div className="mw-header-actions">
-          <button title="Abrir STL" onClick={() => fileRef.current?.click()}><FolderOpen size={17} /></button>
-          <button title="Configurações" onClick={() => notify("Configurações do Workbench em preparação.")}><Settings2 size={17} /></button>
-          <button title="Ajuda" onClick={() => notify("Atalhos: G mover · R girar · S escalar · Shift+D duplicar · Delete excluir.")}><HelpCircle size={17} /></button>
+          <button title="Abrir STL" aria-label="Abrir arquivo STL" onClick={() => fileRef.current?.click()}><FolderOpen size={17} /></button>
+          <button title="Atalhos do editor" aria-label="Ajuda e atalhos" onClick={() => notify("Atalhos: G mover · R girar · S escalar · Shift+D duplicar · Delete excluir · Tab Edit Mode.")}><HelpCircle size={17} /></button>
           <span className="mw-avatar">EA</span>
         </div>
       </header>
@@ -846,7 +860,7 @@ export default function ModelWorkbench() {
         <button onClick={duplicateSelected}>Objeto</button>
         <button onClick={() => setTool("translate")}>Modificar</button>
         <button onClick={toggleEditMode}>Malha</button>
-        <button onClick={() => notify("Operações geométricas serão habilitadas sobre o núcleo de objetos.")}>Geometria</button>
+        <button disabled title="Booleanos e divisão ainda não estão implementados no Workbench">Geometria</button>
         <button onClick={() => setShowGrid((value) => !value)}>Utilidades</button>
         <button onClick={() => notify("Atalhos: G mover · R girar · S escalar · Shift+D duplicar · Delete excluir.")}>Ajuda</button>
       </div>
