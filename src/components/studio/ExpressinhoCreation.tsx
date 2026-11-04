@@ -67,7 +67,7 @@ export default function ExpressinhoCreation() {
     if (!imageFile) { setPreview(null); return; }
     const url = URL.createObjectURL(imageFile);
     setPreview(url);
-    return () => URL.revokeObjectURL(url);
+    return () => window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, [imageFile]);
   const valid = useMemo(() => prompt.trim().length >= 5 && Number.isFinite(width) && width >= 10 && width <= 300, [prompt, width]);
   const download = () => {
@@ -78,7 +78,7 @@ export default function ExpressinhoCreation() {
     a.href = url;
     a.download = "expressinho-plano-3d.json";
     a.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return (
     <section className="expressinho-creation" aria-label="Criar com Expressinho">
