@@ -3491,3 +3491,15 @@ textarea:focus-visible {
 .expressinho-plan summary { cursor: pointer; }
 @media(max-width: 1150px) { .expressinho-creation-fields { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width: 650px) { .expressinho-creation-fields { grid-template-columns: minmax(0,1fr); } .expressinho-creation-heading { flex-wrap: wrap; } }
+
+/* Expressinho local bridge status and hub. */
+
+.expressinho-hub-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px}
+.expressinho-hub-heading h1{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+.expressinho-hub-heading p{max-width:760px;color:var(--muted-foreground);font-size:13px}
+.expressinho-bridge-status,.expressinho-local-note{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin:12px 0;border:1px solid var(--border);border-radius:12px;font-size:13px}
+.expressinho-bridge-status.success{border-color:#32835b;color:#32835b}
+.expressinho-bridge-status.warning,.expressinho-bridge-status.error{border-color:#b77932;color:#b77932}
+.expressinho-local-note{display:block;background:var(--card)}
+.expressinho-local-note p{margin:5px 0 0;color:var(--muted-foreground)}
+@media(max-width:700px){.expressinho-hub-heading{align-items:stretch;flex-direction:column}.expressinho-hub-heading>button{width:100%}}
