@@ -7,7 +7,8 @@ describe("Calculadora Express'Arte", () => {
     expect(result.material).toBeCloseTo(5);
     expect(result.energy).toBeCloseTo(0.405);
     expect(result.machine).toBe(0);
-    expect(result.cost).toBeCloseTo(7.905);
+    expect(result.labor).toBeCloseTo(5);
+    expect(result.cost).toBeCloseTo(12.905);
   });
 
   it("aplica lucro sobre o custo e desconta a taxa sobre o preço de venda", () => {
@@ -48,5 +49,6 @@ describe("Calculadora Express'Arte", () => {
     expect(calculatePricing({ ...defaultPricing, fee: 100 }).valid).toBe(false);
     expect(calculatePricing({ ...defaultPricing, machineValue: 1000, machineLifeHours: 0 }).valid).toBe(false);
     expect(calculatePricing({ ...defaultPricing, quantity: 0 }).valid).toBe(false);
+    expect(calculatePricing({ ...defaultPricing, failureRate: 101 }).valid).toBe(false);
   });
 });
