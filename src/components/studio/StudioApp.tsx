@@ -56,6 +56,7 @@ import {
 } from "@/lib/studio/model";
 import { ShapeIcon } from "./ShapeIcon";
 import Text3DPanel from "./Text3DPanel";
+import Nameplate3DPanel from "./Nameplate3DPanel";
 import { useStudio } from "./StudioProvider";
 import { coerceConfig } from "@/lib/studio/persistence";
 import { defaultPricing, calculatePricing } from "@/lib/studio/pricing";
@@ -642,6 +643,49 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     setZoom(100);
     setReset((value) => value + 1);
     notify("Texto 3D criado. Exporte em STL e confira as letras e o fatiamento no Bambu Studio.");
+  };
+  const createNameplateModel = async (
+    base: BufferGeometry,
+    raisedText: BufferGeometry,
+    filename: string,
+  ) => {
+    if (busy || solidLock.current) {
+      base.dispose();
+      raisedText.dispose();
+      return;
+    }
+    solidLock.current = true;
+    setBusy(true);
+    setSolidBusy(true);
+    let result: BufferGeometry | undefined;
+    try {
+      result = await editSolid(solidPositions(base), {
+        kind: "union",
+        second: solidPositions(raisedText),
+      });
+      setUndoGeometry((old) => {
+        old?.dispose();
+        return null;
+      });
+      setImported((old) => {
+        old?.geometry.dispose();
+        return { name: filename, geometry: result! };
+      });
+      result = undefined;
+      setView("3d");
+      setZoom(100);
+      setReset((value) => value + 1);
+      notify("Placa criada: letras e base unidas em um único sólido Manifold. Confira no Bambu Studio.");
+    } catch (error) {
+      result?.dispose();
+      notify(error instanceof Error ? error.message : "Não foi possível unir as letras à base.");
+    } finally {
+      base.dispose();
+      raisedText.dispose();
+      solidLock.current = false;
+      setBusy(false);
+      setSolidBusy(false);
+    }
   };
   const applySvgLogo = async (file: File) => {
     if (!imported || busy || solidLock.current) return;
@@ -1276,6 +1320,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   </fieldset>
                 ) : (
                   <>
+                    <Nameplate3DPanel disabled={busy || solidBusy} onCreate={createNameplateModel} />
                     <Text3DPanel disabled={busy || solidBusy} onCreate={createTextModel} />
                     <div className="property-section">
                       <div className="section-label">
