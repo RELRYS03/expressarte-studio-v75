@@ -38,7 +38,7 @@ describe("text 3D geometry", () => {
 
   it("rejects empty, multiline, unsupported and overlong text", () => {
     expect(() => createText3DGeometry({ text: "   " })).toThrow();
-    expect(() => createText3DGeometry({ text: "LINHA 1\\nLINHA 2" })).toThrow();
+    expect(() => createText3DGeometry({ text: "LINHA 1\nLINHA 2" })).toThrow();
     expect(() => createText3DGeometry({ text: "JOÃO" })).toThrow(/caracteres/);
     expect(() => createText3DGeometry({ text: "A".repeat(33) })).toThrow(/32 caracteres/);
   });
