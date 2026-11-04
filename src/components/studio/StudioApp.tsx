@@ -30,6 +30,7 @@ import {
   Layers,
   Type,
   Palette,
+  Sparkles,
   Settings2,
   Monitor,
   FileBox,
@@ -1090,6 +1091,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
             </Link>
           ))}
           <Link to="/color-studio" className="nav-link"><Palette /> Color Studio</Link>
+          <Link to="/expressinho" className="nav-link"><Sparkles /> Expressinho</Link>
         </nav>
         <div className="header-end">
           <span className="version">STUDIO v7.5</span>
