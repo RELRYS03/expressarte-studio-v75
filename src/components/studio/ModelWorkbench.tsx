@@ -763,11 +763,14 @@ export default function ModelWorkbench() {
       return;
     }
     setBusy(true);
+    const exportGeometries: THREE.BufferGeometry[] = [];
     try {
       const { STLExporter } = await import("three/examples/jsm/exporters/STLExporter.js");
       const group = new THREE.Group();
       api.objects.filter((mesh) => mesh.visible).forEach((mesh) => {
-        const exported = new THREE.Mesh(mesh.geometry.clone(), mesh.material);
+        const geometry = mesh.geometry.clone();
+        exportGeometries.push(geometry);
+        const exported = new THREE.Mesh(geometry, mesh.material);
         exported.position.copy(mesh.position);
         exported.quaternion.copy(mesh.quaternion);
         exported.scale.copy(mesh.scale);
@@ -788,6 +791,7 @@ export default function ModelWorkbench() {
     } catch (error) {
       notify(error instanceof Error ? error.message : "Falha ao exportar STL.");
     } finally {
+      exportGeometries.forEach((geometry) => geometry.dispose());
       setBusy(false);
     }
   };
