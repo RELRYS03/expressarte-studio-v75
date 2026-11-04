@@ -8,13 +8,13 @@ Este documento descreve capacidades **equivalentes e originais**, não cópia de
 
 | Módulo original Express'Arte | Escopo funcional | Estado no repositório |
 | --- | --- | --- |
-| Criar chaveiro personalizado | base circular/retangular, argola e furo, nome, espessura | protótipo inicial PR 24 (bases fixas); texto pendente |
-| Aplicar logo | importação SVG, escala, posicionamento e relevo | pendente |
+| Criar chaveiro personalizado | base circular/retangular/hexagonal, argola e furo, dimensões e espessura | protótipos parametrizados na branch PR 24; validação real pendente |
+| Aplicar logo | importação SVG, escala, posicionamento e relevo | extrusão SVG e união sobre STL na branch PR 24; validar malha e fatiamento |
 | Peça no formato do logo | vetorização de silhueta, offset, extrusão, furo opcional | pendente |
-| Personalizar nome/texto | fontes licenciadas, kerning, alinhamento, altura e relevo | pendente |
-| Letras-caixa LED | extrusão oca, parede, fundo removível, folga e passagem de fiação | pendente |
+| Personalizar nome/texto | extrusão de texto, largura e profundidade configuráveis; fontes, kerning e acentos | gerador local básico de texto 3D na branch PR 24; fonte ASCII e recursos tipográficos avançados pendentes |
+| Letras-caixa LED | extrusão oca, parede, fundo removível, folga e passagem de fiação | protótipos separados de moldura/tampa; corte de passagem e encaixe real pendentes |
 | Letreiros | texto unido, base e suportes, dimensionamento | pendente |
-| Prévia em tempo real | visualização integrada, atualização de parâmetros, controles de câmera | Studio existente; novos geradores pendentes |
+| Prévia em tempo real | visualização integrada, atualização de parâmetros, controles de câmera | viewport existente integrado ao gerador de texto 3D; validação Windows/Android pendente |
 | Gerenciador de arquivos | pastas, pesquisa, tags, favoritos, miniaturas, duplicação e backup | projetos locais existentes; expansão pendente |
 | STL / 3MF | STL com malha verificável; 3MF com unidades, objetos e cor conforme suporte | exportação existente; validação de 3MF pendente |
 | Calculadora de precificação | material, energia, tempo, perdas, mão de obra, margem | calculadora existente; revisão da integração pendente |
@@ -33,7 +33,7 @@ Este documento descreve capacidades **equivalentes e originais**, não cópia de
 ## Ordem de engenharia
 
 1. **Fundação geométrica:** validar PR 22 com dois STLs reais, Windows, Android, desfazer, timeout e fatiamento. Não confundir manifold com reparo automático.
-2. **Geradores básicos:** PR 24; validar chaveiros e placa, exportação STL e fechamento dos furos.
+2. **Geradores básicos:** PR 24 inclui chaveiros, placa, SVG e texto 3D local; validar dimensões, exportação STL e fechamento das malhas.
 3. **SVG / texto / silhueta:** sanitização SVG, curvas e furos internos, extrusão, posicionamento e booleanas no Worker. Preservar arquivo original.
 4. **Letras e produtos:** letras-caixa, letreiros, molduras, litofania, caixas e suportes, com parâmetros editáveis.
 5. **Produção:** saída 3MF especificada e testada; componentes por cor, conferência Bambu Studio e custos reais.
