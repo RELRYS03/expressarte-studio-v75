@@ -22,11 +22,18 @@ describe("text 3D geometry", () => {
       expect(bounds.min.z).toBeCloseTo(0, 5);
       expect(geometry.getAttribute("position").count).toBeGreaterThan(30);
       const positions = geometry.getAttribute("position");
-      expect(Array.from({ length: positions.count }, (_, index) => [
-        positions.getX(index),
-        positions.getY(index),
-        positions.getZ(index),
-      ]).flat().every(Number.isFinite)).toBe(true);
+      let finite = true;
+      for (let index = 0; index < positions.count; index += 1) {
+        if (
+          !Number.isFinite(positions.getX(index)) ||
+          !Number.isFinite(positions.getY(index)) ||
+          !Number.isFinite(positions.getZ(index))
+        ) {
+          finite = false;
+          break;
+        }
+      }
+      expect(finite).toBe(true);
     } finally {
       geometry.dispose();
     }
