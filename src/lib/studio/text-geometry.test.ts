@@ -21,7 +21,12 @@ describe("text 3D geometry", () => {
       expect(bounds.min.y + bounds.max.y).toBeCloseTo(0, 4);
       expect(bounds.min.z).toBeCloseTo(0, 5);
       expect(geometry.getAttribute("position").count).toBeGreaterThan(30);
-      expect(Array.from(geometry.getAttribute("position").array).every(Number.isFinite)).toBe(true);
+      const positions = geometry.getAttribute("position");
+      expect(Array.from({ length: positions.count }, (_, index) => [
+        positions.getX(index),
+        positions.getY(index),
+        positions.getZ(index),
+      ]).flat().every(Number.isFinite)).toBe(true);
     } finally {
       geometry.dispose();
     }
