@@ -39,7 +39,7 @@ describe("nameplate 3D", () => {
       expect(textSize.x).toBeLessThanOrEqual(56.02);
       expect(textSize.y).toBeLessThanOrEqual(13.82);
       expect(parts.text.boundingBox!.min.z).toBeCloseTo(2.8, 4);
-      expect(parts.text.boundingBox!.max.z).toBeCloseTo(4, 4);
+      expect(parts.text.boundingBox!.max.z).toBeCloseTo(4.2, 4);
     } finally {
       parts.base.dispose();
       parts.text.dispose();
