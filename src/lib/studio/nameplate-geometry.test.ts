@@ -36,7 +36,7 @@ describe("nameplate 3D", () => {
       const baseSize = parts.base.boundingBox!.getSize(new Vector3());
       const textSize = parts.text.boundingBox!.getSize(new Vector3());
       expect([baseSize.x, baseSize.y, baseSize.z]).toEqual([80, 30, 3]);
-      expect(textSize.x).toBeLessThanOrEqual(64.02);
+      expect(textSize.x).toBeLessThanOrEqual(56.02);
       expect(textSize.y).toBeLessThanOrEqual(13.82);
       expect(parts.text.boundingBox!.min.z).toBeCloseTo(2.8, 4);
       expect(parts.text.boundingBox!.max.z).toBeCloseTo(4, 4);
