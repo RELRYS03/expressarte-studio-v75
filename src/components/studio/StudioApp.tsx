@@ -667,11 +667,12 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
         old?.dispose();
         return null;
       });
+      const completedGeometry = result;
+      result = undefined;
       setImported((old) => {
         old?.geometry.dispose();
-        return { name: filename, geometry: result! };
+        return { name: filename, geometry: completedGeometry };
       });
-      result = undefined;
       setView("3d");
       setZoom(100);
       setReset((value) => value + 1);
