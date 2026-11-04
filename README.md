@@ -18,7 +18,7 @@ Projeto em **React 19 + TypeScript + Three.js + TanStack Start + Vite**. Esta en
 4. Abra no navegador o endereço local mostrado no terminal. Na primeira execução, é necessário acesso à internet para baixar dependências do npm.
 5. Pressione `Ctrl+C` na janela do terminal para encerrar.
 
-Para usar corte fechado e união booleana do Blender 5.2, abra também `INICIAR_BLENDER_BRIDGE_WINDOWS.bat` e mantenha essa janela aberta. A ponte escuta somente em `127.0.0.1:8766` e aceita as origens locais do Studio. O botão **Verificar** no editor informa se ela está conectada.
+Para usar corte fechado e união booleana do Blender 5.2, abra também `scripts/INICIAR_BLENDER_BRIDGE_WINDOWS.bat` e mantenha essa janela aberta. A ponte escuta somente em `127.0.0.1:8766` e aceita as origens locais do Studio. O botão **Verificar** no editor informa se ela está conectada.
 
 O projeto não inclui `node_modules`, banco de dados, backend Python ou executável pré-compilado. Para publicar o site público gratuitamente no Cloudflare Workers, siga [`README_IMAGEM_PARA_3D.md`](README_IMAGEM_PARA_3D.md).
 
@@ -73,7 +73,7 @@ A versão distribuída inclui código-fonte e não contém um build de produçã
 A rota `/expressinho` reúne o planejador inicial, geração local de chaveiros, auditoria STL e preparação de malhas.
 
 1. Instale Blender 5.2 e Python 3 no Windows.
-2. Se o Blender estiver no caminho padrão `C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe`, execute `scripts/INICIAR_BLENDER_BRIDGE_WINDOWS.bat`. Para outro local, defina `EXPRESSARTE_BLENDER_EXE`.
+2. Se o Blender estiver no caminho padrão `C:\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe`, execute `scripts/INICIAR_BLENDER_BRIDGE_WINDOWS.bat`. Para outro local, defina `EXPRESSARTE_BLENDER_EXE`.
 3. Mantenha a janela da ponte aberta. Na página Expressinho, clique em **Verificar Blender local**.
 4. A ponte Expressinho escuta apenas em `127.0.0.1:8766`; o Mesh Workbench local é separado e usa `127.0.0.1:8767`.
 
