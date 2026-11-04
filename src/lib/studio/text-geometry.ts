@@ -22,7 +22,7 @@ export function createText3DGeometry(options: Text3DOptions): BufferGeometry {
 
   if (!text) throw new Error("Digite um texto para gerar o modelo 3D.");
   if (text.length > 32) throw new Error("Use no máximo 32 caracteres.");
-  if (/[\\r\\n\\t]/.test(text)) throw new Error("Use apenas uma linha de texto.");
+  if (/[\r\n\t]/.test(text)) throw new Error("Use apenas uma linha de texto.");
   if (!Number.isFinite(widthMm) || widthMm < 10 || widthMm > 250) {
     throw new Error("A largura deve ficar entre 10 e 250 mm.");
   }
