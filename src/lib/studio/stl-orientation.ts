@@ -1,4 +1,4 @@
-import { MathUtils, type BufferGeometry, type Object3D } from "three";
+import type { BufferGeometry, Object3D } from "three";
 
 /** Convert conventional Z-up STL coordinates into the Workbench's Y-up scene. */
 export function orientStlForWorkbench(geometry: BufferGeometry): BufferGeometry {
