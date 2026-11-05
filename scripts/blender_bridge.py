@@ -189,7 +189,15 @@ class Handler(BaseHTTPRequestHandler):
                     raise RuntimeError("TripoSR falhou. Confira GPU, dependencias e pesos no terminal da ponte.")
                 if not 24 <= model.stat().st_size <= 50 * 1024 * 1024:
                     raise ValueError("GLB gerado vazio ou maior que 50 MB.")
-                glb = base64.b64encode(model.read_bytes()).decode("ascii")
+                model_bytes = model.read_bytes()
+                # Validate GLB 2.0 header before reporting success.
+                if (len(model_bytes) < 20 or model_bytes[:4] != b"glTF"
+                        or int.from_bytes(model_bytes[4:8], "little") != 2
+                        or int.from_bytes(model_bytes[8:12], "little") != len(model_bytes)
+                        or int.from_bytes(model_bytes[12:16], "little") < 2
+                        or model_bytes[16:20] != b"JSON"):
+                    raise ValueError("TripoSR retornou um GLB invalido.")
+                glb = base64.b64encode(model_bytes).decode("ascii")
             self._json(200, {"ok": True, "glbBase64": glb,
                              "message": "Modelo gerado localmente. Verifique a malha no Blender e Bambu Studio."})
         except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
