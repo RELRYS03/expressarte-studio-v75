@@ -5,6 +5,7 @@ on:
     branches:
       - feature/expressinho-malha-auditor
       - feature/expressinho-preparar-impressao
+      - feature/expressinho-triposr-local
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -20,7 +21,7 @@ jobs:
       - name: Verificar sintaxe dos scripts Blender
         run: python -m compileall -q scripts
       - name: Testar validacao de parametros
-        run: python -m unittest discover -s tests -p "test_expressinho_prepare_specs.py" -v
+        run: python -m unittest discover -s tests -p "test_expressinho_*_specs.py" -v
       - name: Instalar dependencias web
         run: npm ci
       - name: Compilar Studio

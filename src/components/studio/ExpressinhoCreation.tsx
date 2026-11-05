@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, ImagePlus, WandSparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ExpressinhoTripoSR from "./ExpressinhoTripoSR";
 
 type Kind = "chaveiro" | "placa" | "relevo" | "suporte" | "figure";
 const KINDS: { id: Kind; label: string }[] = [
@@ -109,6 +110,7 @@ export default function ExpressinhoCreation() {
         </label>
       </div>
       {preview && <div className="expressinho-image-preview"><img src={preview} alt="Imagem de referência selecionada" /><Button variant="outline" size="sm" onClick={() => { setImageFile(null); setPlan(null); }}><X size={14}/> Remover imagem</Button></div>}
+      <ExpressinhoTripoSR imageFile={imageFile} />
       <div className="expressinho-creation-actions">
         <Button disabled={!valid} onClick={() => setPlan(makePlan(prompt.trim(), kind, width, !!imageFile))}><WandSparkles size={15}/> Preparar plano 3D</Button>
         {plan && <Button variant="outline" onClick={download}><Download size={15}/> Baixar plano JSON</Button>}
