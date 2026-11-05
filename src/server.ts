@@ -48,14 +48,14 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      if (import.meta.env.PROD) {
+        const authResponse = await handleTeamAuth(request, env);
+        if (authResponse) return authResponse;
+      }
       if (new URL(request.url).pathname === "/api/ai-3d/generate") {
         if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
         // Never pretend an unconfigured provider generated a printable model.
         return Response.json({ error: "Motor de geração 3D não configurado." }, { status: 501, headers: { "Cache-Control": "no-store" } });
-      }
-      if (import.meta.env.PROD) {
-        const authResponse = await handleTeamAuth(request, env);
-        if (authResponse) return authResponse;
       }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
