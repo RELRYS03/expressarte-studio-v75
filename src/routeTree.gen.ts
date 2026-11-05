@@ -14,6 +14,7 @@ import { Route as CalculadoraRouteImport } from './routes/calculadora'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as ComunidadeRouteImport } from './routes/comunidade'
 import { Route as FormasRouteImport } from './routes/formas'
+import { Route as InspecionarGlbRouteImport } from './routes/inspecionar-glb'
 import { Route as MeshDoctorRouteImport } from './routes/mesh-doctor'
 import { Route as ProjetosRouteImport } from './routes/projetos'
 import { Route as StudioRouteImport } from './routes/studio'
@@ -43,6 +44,11 @@ const FormasRoute = FormasRouteImport.update({
   path: '/formas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InspecionarGlbRoute = InspecionarGlbRouteImport.update({
+  id: '/inspecionar-glb',
+  path: '/inspecionar-glb',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MeshDoctorRoute = MeshDoctorRouteImport.update({
   id: '/mesh-doctor',
   path: '/mesh-doctor',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/catalogo': typeof CatalogoRoute
   '/comunidade': typeof ComunidadeRoute
   '/formas': typeof FormasRoute
+  '/inspecionar-glb': typeof InspecionarGlbRoute
   '/mesh-doctor': typeof MeshDoctorRoute
   '/projetos': typeof ProjetosRoute
   '/studio': typeof StudioRoute
@@ -129,6 +136,7 @@ export interface RootRouteChildren {
   CatalogoRoute: typeof CatalogoRoute
   ComunidadeRoute: typeof ComunidadeRoute
   FormasRoute: typeof FormasRoute
+  InspecionarGlbRoute: typeof InspecionarGlbRoute
   MeshDoctorRoute: typeof MeshDoctorRoute
   ProjetosRoute: typeof ProjetosRoute
   StudioRoute: typeof StudioRoute
@@ -171,6 +179,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FormasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/inspecionar-glb': {
+      id: '/inspecionar-glb'
+      path: '/inspecionar-glb'
+      fullPath: '/inspecionar-glb'
+      preLoaderRoute: typeof InspecionarGlbRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mesh-doctor': {
       id: '/mesh-doctor'
       path: '/mesh-doctor'
@@ -201,6 +216,7 @@ const rootRouteChildren: RootRouteChildren = {
   CatalogoRoute: CatalogoRoute,
   ComunidadeRoute: ComunidadeRoute,
   FormasRoute: FormasRoute,
+  InspecionarGlbRoute: InspecionarGlbRoute,
   MeshDoctorRoute: MeshDoctorRoute,
   ProjetosRoute: ProjetosRoute,
   StudioRoute: StudioRoute,
