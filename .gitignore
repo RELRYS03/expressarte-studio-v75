@@ -1,0 +1,11 @@
+node_modules/
+.output/
+.wrangler/
+.nitro/
+.tanstack/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+.dev.vars
