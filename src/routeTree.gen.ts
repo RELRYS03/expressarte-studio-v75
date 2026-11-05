@@ -72,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/comunidade': typeof ComunidadeRoute
   '/formas': typeof FormasRoute
   '/inspecionar-glb': typeof InspecionarGlbRoute
+  '/inspecionar-glb': typeof InspecionarGlbRoute
   '/mesh-doctor': typeof MeshDoctorRoute
   '/projetos': typeof ProjetosRoute
   '/studio': typeof StudioRoute
@@ -82,6 +83,7 @@ export interface FileRoutesByTo {
   '/catalogo': typeof CatalogoRoute
   '/comunidade': typeof ComunidadeRoute
   '/formas': typeof FormasRoute
+  '/inspecionar-glb': typeof InspecionarGlbRoute
   '/mesh-doctor': typeof MeshDoctorRoute
   '/projetos': typeof ProjetosRoute
   '/studio': typeof StudioRoute
@@ -93,6 +95,7 @@ export interface FileRoutesById {
   '/catalogo': typeof CatalogoRoute
   '/comunidade': typeof ComunidadeRoute
   '/formas': typeof FormasRoute
+  '/inspecionar-glb': typeof InspecionarGlbRoute
   '/mesh-doctor': typeof MeshDoctorRoute
   '/projetos': typeof ProjetosRoute
   '/studio': typeof StudioRoute
@@ -105,6 +108,7 @@ export interface FileRouteTypes {
     | '/catalogo'
     | '/comunidade'
     | '/formas'
+    | '/inspecionar-glb'
     | '/mesh-doctor'
     | '/projetos'
     | '/studio'
@@ -115,6 +119,7 @@ export interface FileRouteTypes {
     | '/catalogo'
     | '/comunidade'
     | '/formas'
+    | '/inspecionar-glb'
     | '/mesh-doctor'
     | '/projetos'
     | '/studio'
@@ -125,6 +130,7 @@ export interface FileRouteTypes {
     | '/catalogo'
     | '/comunidade'
     | '/formas'
+    | '/inspecionar-glb'
     | '/mesh-doctor'
     | '/projetos'
     | '/studio'
