@@ -1,0 +1,13 @@
+node_modules/
+.output/
+.wrangler/
+.nitro/
+.tanstack/
+dist/
+coverage/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+.dev.vars

@@ -6,6 +6,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { STLExporter } from "three/examples/jsm/exporters/STLExporter.js";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
+import { readGlbForStudio, clearGlbForStudio } from "@/lib/studio/model-handoff";
 
 type Stats = { meshes: number; triangles: number; width: number; height: number; depth: number; materials: number };
 function inspect(object: THREE.Object3D): Stats {
@@ -134,9 +135,9 @@ export default function ModeloIAWorkshop() {
     view.controls.update();
   }
 
-  const importGLB = async (file: File) => {
-    if (!/\.glb$/i.test(file.name)) { setMessage("Nesta etapa, importe um arquivo GLB binário."); return; }
-    if (file.size > 120 * 1024 * 1024) { setMessage("Arquivo acima de 120 MB. Reduza a malha antes de importar."); return; }
+  const importGLB = async (file: File): Promise<boolean> => {
+    if (!/\.glb$/i.test(file.name)) { setMessage("Nesta etapa, importe um arquivo GLB binário."); return false; }
+    if (file.size > 120 * 1024 * 1024) { setMessage("Arquivo acima de 120 MB. Reduza a malha antes de importar."); return false; }
     setBusy(true);
     try {
       const data = await file.arrayBuffer();
@@ -178,10 +179,23 @@ export default function ModeloIAWorkshop() {
       setFilename(file.name);
       focus(oriented);
       setMessage(`GLB carregado. Eixo original estimado: ${vertical.toUpperCase()}, convertido para Y vertical na oficina. Altura de trabalho: 100 mm, definida para teste. Confira orientação e escala.`);
+      return true;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao importar o GLB.");
+      return false;
     } finally { setBusy(false); }
   };
+  useEffect(() => {
+    let cancelled = false;
+    void readGlbForStudio().then(async blob => {
+      if (!blob || cancelled) return;
+      const imported = await importGLB(new File([blob], "expressinho-imagem-3d.glb", { type: "model/gltf-binary" }));
+      if (imported && !cancelled) await clearGlbForStudio();
+    }).catch(() => {
+      if (!cancelled) setMessage("Não foi possível recuperar o modelo gerado. Use o download GLB e importe o arquivo.");
+    });
+    return () => { cancelled = true; };
+  }, []);
   const resize = (next: number) => {
     const object = objectRef.current;
     if (!object || !nativeHeight || !Number.isFinite(next) || next < 20 || next > 300) return;
@@ -224,7 +238,7 @@ export default function ModeloIAWorkshop() {
         <p>Tripo → GLB → visualização com materiais → medidas → exportação. Sem custo de API nesta oficina.</p>
       </div>
       <label style={{display:"block",border:"1px dashed #aa8262",borderRadius:12,padding:18,cursor:"pointer"}}>
-        <strong>Selecionar modelo GLB gerado no Tripo</strong>
+        <strong>Selecionar modelo GLB gerado por IA</strong>
         <input type="file" accept=".glb,model/gltf-binary" disabled={busy} onChange={(e) => {const file=e.currentTarget.files?.[0];if(file)void importGLB(file);e.currentTarget.value="";}} style={{display:"block",marginTop:10}} />
       </label>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,330px),1fr))",gap:20}}>

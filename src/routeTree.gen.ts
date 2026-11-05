@@ -12,11 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CalculadoraRouteImport } from './routes/calculadora'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
+import { Route as ColorStudioRouteImport } from './routes/color-studio'
 import { Route as ComunidadeRouteImport } from './routes/comunidade'
+import { Route as ExpressinhoRouteImport } from './routes/expressinho'
 import { Route as FormasRouteImport } from './routes/formas'
 import { Route as MeshDoctorRouteImport } from './routes/mesh-doctor'
+import { Route as ModeloIaRouteImport } from './routes/modelo-ia'
 import { Route as ProjetosRouteImport } from './routes/projetos'
+import { Route as QaStudioRouteImport } from './routes/qa-studio'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as WorkbenchRouteImport } from './routes/workbench'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -33,9 +38,19 @@ const CatalogoRoute = CatalogoRouteImport.update({
   path: '/catalogo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ColorStudioRoute = ColorStudioRouteImport.update({
+  id: '/color-studio',
+  path: '/color-studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ComunidadeRoute = ComunidadeRouteImport.update({
   id: '/comunidade',
   path: '/comunidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpressinhoRoute = ExpressinhoRouteImport.update({
+  id: '/expressinho',
+  path: '/expressinho',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FormasRoute = FormasRouteImport.update({
@@ -48,9 +63,19 @@ const MeshDoctorRoute = MeshDoctorRouteImport.update({
   path: '/mesh-doctor',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ModeloIaRoute = ModeloIaRouteImport.update({
+  id: '/modelo-ia',
+  path: '/modelo-ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjetosRoute = ProjetosRouteImport.update({
   id: '/projetos',
   path: '/projetos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QaStudioRoute = QaStudioRouteImport.update({
+  id: '/qa-studio',
+  path: '/qa-studio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StudioRoute = StudioRouteImport.update({
@@ -58,37 +83,57 @@ const StudioRoute = StudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkbenchRoute = WorkbenchRouteImport.update({
+  id: '/workbench',
+  path: '/workbench',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/calculadora': typeof CalculadoraRoute
   '/catalogo': typeof CatalogoRoute
+  '/color-studio': typeof ColorStudioRoute
   '/comunidade': typeof ComunidadeRoute
+  '/expressinho': typeof ExpressinhoRoute
   '/formas': typeof FormasRoute
   '/mesh-doctor': typeof MeshDoctorRoute
+  '/modelo-ia': typeof ModeloIaRoute
   '/projetos': typeof ProjetosRoute
+  '/qa-studio': typeof QaStudioRoute
   '/studio': typeof StudioRoute
+  '/workbench': typeof WorkbenchRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/calculadora': typeof CalculadoraRoute
   '/catalogo': typeof CatalogoRoute
+  '/color-studio': typeof ColorStudioRoute
   '/comunidade': typeof ComunidadeRoute
+  '/expressinho': typeof ExpressinhoRoute
   '/formas': typeof FormasRoute
   '/mesh-doctor': typeof MeshDoctorRoute
+  '/modelo-ia': typeof ModeloIaRoute
   '/projetos': typeof ProjetosRoute
+  '/qa-studio': typeof QaStudioRoute
   '/studio': typeof StudioRoute
+  '/workbench': typeof WorkbenchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/calculadora': typeof CalculadoraRoute
   '/catalogo': typeof CatalogoRoute
+  '/color-studio': typeof ColorStudioRoute
   '/comunidade': typeof ComunidadeRoute
+  '/expressinho': typeof ExpressinhoRoute
   '/formas': typeof FormasRoute
   '/mesh-doctor': typeof MeshDoctorRoute
+  '/modelo-ia': typeof ModeloIaRoute
   '/projetos': typeof ProjetosRoute
+  '/qa-studio': typeof QaStudioRoute
   '/studio': typeof StudioRoute
+  '/workbench': typeof WorkbenchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -96,42 +141,62 @@ export interface FileRouteTypes {
     | '/'
     | '/calculadora'
     | '/catalogo'
+    | '/color-studio'
     | '/comunidade'
+    | '/expressinho'
     | '/formas'
     | '/mesh-doctor'
+    | '/modelo-ia'
     | '/projetos'
+    | '/qa-studio'
     | '/studio'
+    | '/workbench'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/calculadora'
     | '/catalogo'
+    | '/color-studio'
     | '/comunidade'
+    | '/expressinho'
     | '/formas'
     | '/mesh-doctor'
+    | '/modelo-ia'
     | '/projetos'
+    | '/qa-studio'
     | '/studio'
+    | '/workbench'
   id:
     | '__root__'
     | '/'
     | '/calculadora'
     | '/catalogo'
+    | '/color-studio'
     | '/comunidade'
+    | '/expressinho'
     | '/formas'
     | '/mesh-doctor'
+    | '/modelo-ia'
     | '/projetos'
+    | '/qa-studio'
     | '/studio'
+    | '/workbench'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CalculadoraRoute: typeof CalculadoraRoute
   CatalogoRoute: typeof CatalogoRoute
+  ColorStudioRoute: typeof ColorStudioRoute
   ComunidadeRoute: typeof ComunidadeRoute
+  ExpressinhoRoute: typeof ExpressinhoRoute
   FormasRoute: typeof FormasRoute
   MeshDoctorRoute: typeof MeshDoctorRoute
+  ModeloIaRoute: typeof ModeloIaRoute
   ProjetosRoute: typeof ProjetosRoute
+  QaStudioRoute: typeof QaStudioRoute
   StudioRoute: typeof StudioRoute
+  WorkbenchRoute: typeof WorkbenchRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -157,11 +222,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CatalogoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/color-studio': {
+      id: '/color-studio'
+      path: '/color-studio'
+      fullPath: '/color-studio'
+      preLoaderRoute: typeof ColorStudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/comunidade': {
       id: '/comunidade'
       path: '/comunidade'
       fullPath: '/comunidade'
       preLoaderRoute: typeof ComunidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expressinho': {
+      id: '/expressinho'
+      path: '/expressinho'
+      fullPath: '/expressinho'
+      preLoaderRoute: typeof ExpressinhoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/formas': {
@@ -178,11 +257,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MeshDoctorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/modelo-ia': {
+      id: '/modelo-ia'
+      path: '/modelo-ia'
+      fullPath: '/modelo-ia'
+      preLoaderRoute: typeof ModeloIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projetos': {
       id: '/projetos'
       path: '/projetos'
       fullPath: '/projetos'
       preLoaderRoute: typeof ProjetosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qa-studio': {
+      id: '/qa-studio'
+      path: '/qa-studio'
+      fullPath: '/qa-studio'
+      preLoaderRoute: typeof QaStudioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/studio': {
@@ -192,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workbench': {
+      id: '/workbench'
+      path: '/workbench'
+      fullPath: '/workbench'
+      preLoaderRoute: typeof WorkbenchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -199,11 +299,16 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CalculadoraRoute: CalculadoraRoute,
   CatalogoRoute: CatalogoRoute,
+  ColorStudioRoute: ColorStudioRoute,
   ComunidadeRoute: ComunidadeRoute,
+  ExpressinhoRoute: ExpressinhoRoute,
   FormasRoute: FormasRoute,
   MeshDoctorRoute: MeshDoctorRoute,
+  ModeloIaRoute: ModeloIaRoute,
   ProjetosRoute: ProjetosRoute,
+  QaStudioRoute: QaStudioRoute,
   StudioRoute: StudioRoute,
+  WorkbenchRoute: WorkbenchRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
