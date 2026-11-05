@@ -16,6 +16,7 @@ import { Route as ColorStudioRouteImport } from './routes/color-studio'
 import { Route as ComunidadeRouteImport } from './routes/comunidade'
 import { Route as ExpressinhoRouteImport } from './routes/expressinho'
 import { Route as FormasRouteImport } from './routes/formas'
+import { Route as ImagemPara3dRouteImport } from './routes/imagem-para-3d'
 import { Route as MeshDoctorRouteImport } from './routes/mesh-doctor'
 import { Route as ModeloIaRouteImport } from './routes/modelo-ia'
 import { Route as ProjetosRouteImport } from './routes/projetos'
@@ -58,6 +59,11 @@ const FormasRoute = FormasRouteImport.update({
   path: '/formas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImagemPara3dRoute = ImagemPara3dRouteImport.update({
+  id: '/imagem-para-3d',
+  path: '/imagem-para-3d',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MeshDoctorRoute = MeshDoctorRouteImport.update({
   id: '/mesh-doctor',
   path: '/mesh-doctor',
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/comunidade': typeof ComunidadeRoute
   '/expressinho': typeof ExpressinhoRoute
   '/formas': typeof FormasRoute
+  '/imagem-para-3d': typeof ImagemPara3dRoute
   '/mesh-doctor': typeof MeshDoctorRoute
   '/modelo-ia': typeof ModeloIaRoute
   '/projetos': typeof ProjetosRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/comunidade': typeof ComunidadeRoute
   '/expressinho': typeof ExpressinhoRoute
   '/formas': typeof FormasRoute
+  '/imagem-para-3d': typeof ImagemPara3dRoute
   '/mesh-doctor': typeof MeshDoctorRoute
   '/modelo-ia': typeof ModeloIaRoute
   '/projetos': typeof ProjetosRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/comunidade': typeof ComunidadeRoute
   '/expressinho': typeof ExpressinhoRoute
   '/formas': typeof FormasRoute
+  '/imagem-para-3d': typeof ImagemPara3dRoute
   '/mesh-doctor': typeof MeshDoctorRoute
   '/modelo-ia': typeof ModeloIaRoute
   '/projetos': typeof ProjetosRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/comunidade'
     | '/expressinho'
     | '/formas'
+    | '/imagem-para-3d'
     | '/mesh-doctor'
     | '/modelo-ia'
     | '/projetos'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/comunidade'
     | '/expressinho'
     | '/formas'
+    | '/imagem-para-3d'
     | '/mesh-doctor'
     | '/modelo-ia'
     | '/projetos'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/comunidade'
     | '/expressinho'
     | '/formas'
+    | '/imagem-para-3d'
     | '/mesh-doctor'
     | '/modelo-ia'
     | '/projetos'
@@ -191,6 +203,7 @@ export interface RootRouteChildren {
   ComunidadeRoute: typeof ComunidadeRoute
   ExpressinhoRoute: typeof ExpressinhoRoute
   FormasRoute: typeof FormasRoute
+  ImagemPara3dRoute: typeof ImagemPara3dRoute
   MeshDoctorRoute: typeof MeshDoctorRoute
   ModeloIaRoute: typeof ModeloIaRoute
   ProjetosRoute: typeof ProjetosRoute
@@ -250,6 +263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FormasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/imagem-para-3d': {
+      id: '/imagem-para-3d'
+      path: '/imagem-para-3d'
+      fullPath: '/imagem-para-3d'
+      preLoaderRoute: typeof ImagemPara3dRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mesh-doctor': {
       id: '/mesh-doctor'
       path: '/mesh-doctor'
@@ -303,6 +323,7 @@ const rootRouteChildren: RootRouteChildren = {
   ComunidadeRoute: ComunidadeRoute,
   ExpressinhoRoute: ExpressinhoRoute,
   FormasRoute: FormasRoute,
+  ImagemPara3dRoute: ImagemPara3dRoute,
   MeshDoctorRoute: MeshDoctorRoute,
   ModeloIaRoute: ModeloIaRoute,
   ProjetosRoute: ProjetosRoute,

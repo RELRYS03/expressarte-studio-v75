@@ -22,16 +22,20 @@
 
 | Recurso | Estado da candidata | Onde fica no aplicativo |
 | --- | --- | --- |
-| Imagem → relevo, silhueta ou litofania | Código existente, com testes; não é reconstrução de personagem completo | `/` |
+| Criador guiado por texto | Chaveiros com nome/formato, organizador com quatro compartimentos e boneco colecionável base com boné opcional; sólidos reais, sem API | `/` |
+| Imagem → relevo | Geração local na tela de criação | `/`, aba Por imagem |
+| Imagem → relevo, silhueta ou litofania avançados | Conversor anterior preservado; não é reconstrução de personagem completo | `/imagem-para-3d` |
 | Imagem → modelo completo com TripoSR local | Integração reunida; geração real depende do motor instalado no computador e ainda precisa de validação | `/expressinho` |
 | Modelo GLB → visualizar, medir e exportar STL/GLB | Oficina existente conectada ao TripoSR; falta teste visual e de impressão | `/modelo-ia` |
-| Texto → chaveiro simples no Blender | Código existente para círculo/coração; execução local precisa de homologação | `/expressinho` |
+| Texto → chaveiro simples no Blender | Fluxo anterior preservado para círculo/coração; o novo criador na página inicial gera nome e três formatos sem Blender | `/expressinho` |
 | Texto → personagem ou objeto livre; imagem + texto juntos | **Ainda não operacional.** Trabalho experimental preservado no mapa; falta motor gratuito confirmado e integração validada | Próxima etapa |
 | Editor, projetos, calculadora, catálogo e ferramentas de malha | Reunidos na candidata; projetos e catálogo do Studio continuam locais ao navegador | `/studio`, `/projetos`, `/calculadora`, `/catalogo` |
 | Correção do erro 503 no Cloudflare | Reunida e verificada no Worker compilado | Servidor |
 | Validação de STL de chaveiros | Reunida com testes de exportação; Bambu Studio pendente | Editor |
 
 Uma resposta da FreeLLMAPI, um plano JSON ou um adaptador de API não prova que uma malha 3D foi gerada. TripoSR usa imagem; ele não usa texto para condicionar a geração.
+
+O criador guiado interpreta um vocabulário restrito. Não reproduz rostos, roupas, personagens arbitrários ou todos os detalhes escritos. Exemplos: `Boneco colecionável com boné, altura de 100 mm`; `Chaveiro retangular, 60 x 35 x 3 mm, nome "ANA"`; `Organizador 180 x 120 x 40 mm`. A prévia inclui renderização SVG das mesmas malhas quando WebGL não está disponível.
 
 ## Próxima execução
 

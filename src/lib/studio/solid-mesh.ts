@@ -2,7 +2,7 @@ import type { Manifold, ManifoldToplevel, Vec3 } from "manifold-3d";
 import type { MeshAxis } from "./mesh-editing";
 
 export const MAX_SOLID_VERTICES = 600_000;
-export type SolidOperation = { kind: "union"; second: Float32Array } | {
+export type SolidOperation = { kind: "union"; second: Float32Array } | { kind: "union-many"; parts: Float32Array[] } | {
   kind: "cut"; axis: MeshAxis; offset: number; keepPositive: boolean;
 };
 
@@ -28,6 +28,11 @@ export function operateSolid(api: ManifoldToplevel, positions: Float32Array, ope
     const first = input(positions);
     let result: Manifold;
     if (operation.kind === "union") result = first.add(input(operation.second));
+    else if (operation.kind === "union-many") {
+      if (!Array.isArray(operation.parts) || !operation.parts.length || operation.parts.length > 24)
+        throw new Error("Use entre 2 e 25 partes para formar a peça.");
+      result = api.Manifold.union([first, ...operation.parts.map(input)]);
+    }
     else {
       if (!["x", "y", "z"].includes(operation.axis) || !Number.isFinite(operation.offset))
         throw new Error("Plano de corte inválido.");

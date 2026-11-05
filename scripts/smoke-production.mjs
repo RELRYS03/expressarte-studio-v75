@@ -26,7 +26,7 @@ assert.equal(login.status, 303);
 const cookie = login.headers.get("set-cookie")?.split(";")[0];
 assert.ok(cookie);
 
-const pages = ["/", "/studio", "/formas", "/projetos", "/catalogo", "/comunidade", "/calculadora", "/mesh-doctor", "/expressinho", "/modelo-ia", "/workbench", "/qa-studio", "/color-studio"];
+const pages = ["/", "/imagem-para-3d", "/studio", "/formas", "/projetos", "/catalogo", "/comunidade", "/calculadora", "/mesh-doctor", "/expressinho", "/modelo-ia", "/workbench", "/qa-studio", "/color-studio"];
 for (const path of pages) {
   const response = await fetchPage(path, env, { headers: { cookie } });
   assert.equal(response.status, 200, `${path} must render after login`);

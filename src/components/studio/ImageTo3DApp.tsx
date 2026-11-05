@@ -42,7 +42,8 @@ import MeshyImageTo3D from "./MeshyImageTo3D";
 
 const Preview3D = lazy(() => import("./ImagePreview3D"));
 const menu = [
-  { to: "/", label: "Imagem para 3D", icon: ImageUp },
+  { to: "/", label: "Criar objetos", icon: Sparkles },
+  { to: "/imagem-para-3d", label: "Imagem para 3D", icon: ImageUp },
   { to: "/studio", label: "Editor 3D", icon: Box },
   { to: "/expressinho", label: "Criar objeto por imagem", icon: Sparkles },
   { to: "/formas", label: "Formas", icon: Shapes },

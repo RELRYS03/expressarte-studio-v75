@@ -1,10 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { PrintableMesh } from "@/lib/studio/image3d";
+import SoftwareMeshPreview from "./SoftwareMeshPreview";
 
 export default function ImagePreview3D({ mesh, topDown, reset }: { mesh: PrintableMesh; topDown: boolean; reset: number }) {
   const host = useRef<HTMLDivElement>(null);
+  const [unavailable, setUnavailable] = useState(false);
   const sceneRef = useRef<{ scene: THREE.Scene; camera: THREE.PerspectiveCamera; controls: OrbitControls; view: THREE.Group } | null>(null);
   useEffect(() => {
     const node = host.current;
@@ -12,7 +14,9 @@ export default function ImagePreview3D({ mesh, topDown, reset }: { mesh: Printab
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xede0d1);
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 5000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    let renderer: THREE.WebGLRenderer;
+    try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
+    catch { setUnavailable(true); return; }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -81,5 +85,7 @@ export default function ImagePreview3D({ mesh, topDown, reset }: { mesh: Printab
     current.camera.updateProjectionMatrix();
     current.controls.update();
   }, [mesh.widthMm, mesh.heightMm, mesh.depthMm, topDown, reset]);
-  return <div className="im3-render" ref={host} aria-label="Pré-visualização 3D interativa. Arraste para girar e role para aproximar." />;
+  return <div className="im3-render" ref={host} aria-label="Pré-visualização 3D interativa. Arraste para girar e role para aproximar.">
+    {unavailable && <SoftwareMeshPreview mesh={mesh} topDown={topDown} reset={reset}/>}
+  </div>;
 }
