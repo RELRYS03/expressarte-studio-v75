@@ -15,6 +15,7 @@
 | Configurar geração local por imagem | [Guia TripoSR](docs/EXPRESSINHO_TRIPOSR_LOCAL.md) |
 | Executar, autenticar e publicar o Studio | [Guia de execução e publicação](README_IMAGEM_PARA_3D.md) |
 | Localizar trabalho anterior | [Mapa de branches e PRs](docs/MAPA_DO_TRABALHO.md) |
+| Editor escuro da referência do usuário | [Model Workbench: versão e commits](docs/EDITOR_ATUAL.md), rota `/workbench` |
 
 **Publicado e em validação são estados diferentes.** O código consolidado nesta branch ainda não foi publicado. `main`, o site atual, o catálogo e o Netlify antigo permanecem preservados.
 
@@ -29,7 +30,8 @@
 | Modelo GLB → visualizar, medir e exportar STL/GLB | Oficina existente conectada ao TripoSR; falta teste visual e de impressão | `/modelo-ia` |
 | Texto → chaveiro simples no Blender | Fluxo anterior preservado para círculo/coração; o novo criador na página inicial gera nome e três formatos sem Blender | `/expressinho` |
 | Texto → personagem ou objeto livre; imagem + texto juntos | **Ainda não operacional.** Trabalho experimental preservado no mapa; falta motor gratuito confirmado e integração validada | Próxima etapa |
-| Editor, projetos, calculadora, catálogo e ferramentas de malha | Reunidos na candidata; projetos e catálogo do Studio continuam locais ao navegador | `/studio`, `/projetos`, `/calculadora`, `/catalogo` |
+| Editor avançado Model Workbench | Interface escura da referência, transformações e edição de malha; editor principal preservado | `/workbench` |
+| Editor legado, projetos, calculadora, catálogo e ferramentas de malha | Reunidos na candidata; projetos e catálogo do Studio continuam locais ao navegador | `/studio`, `/projetos`, `/calculadora`, `/catalogo` |
 | Correção do erro 503 no Cloudflare | Reunida e verificada no Worker compilado | Servidor |
 | Validação de STL de chaveiros | Reunida com testes de exportação; Bambu Studio pendente | Editor |
 

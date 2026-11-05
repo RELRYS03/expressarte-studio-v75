@@ -76,7 +76,7 @@ export default function CreationHub() {
   return <div className="creation-hub">
     <header className="creation-header">
       <Link to="/" className="creation-brand"><span><Box size={23}/></span><div>EXPRESS’ARTE<small>STUDIO 3D</small></div></Link>
-      <nav aria-label="Navegação principal"><Link to="/" aria-current="page">Criar</Link><Link to="/studio">Editor 3D</Link><Link to="/catalogo">Catálogo</Link><Link to="/calculadora">Calculadora</Link></nav>
+      <nav aria-label="Navegação principal"><Link to="/" aria-current="page">Criar</Link><Link to="/workbench">Editor 3D</Link><Link to="/catalogo">Catálogo</Link><Link to="/calculadora">Calculadora</Link></nav>
       <span className="creation-local">Criação local · sem créditos</span>
     </header>
     <main className="creation-main">
@@ -119,7 +119,7 @@ export default function CreationHub() {
           <div className="creation-export"><div><h2>{mesh ? generatedDescription : "Pronto para ganhar forma"}</h2><p>{mesh ? `${mesh.widthMm.toFixed(1)} × ${mesh.heightMm.toFixed(1)} × ${mesh.depthMm.toFixed(1)} mm · ${mesh.triangles.toLocaleString("pt-BR")} triângulos` : "STL e 3MF em milímetros, para abrir no seu fatiador."}</p></div><div className="creation-export-buttons"><Button disabled={!mesh || busy} onClick={() => exportFile("stl")}><Download size={16}/> Baixar STL</Button><Button variant="outline" disabled={!mesh || busy} onClick={() => exportFile("3mf")}>3MF</Button></div>{mesh && <small>Esta é a última peça gerada. Alterações no formulário exigem gerar novamente. Confira suportes e orientação no Bambu Studio.</small>}</div>
         </section>
       </div>
-      <footer className="creation-footer"><span><Box size={16}/> Mais possibilidades na sua oficina</span><Link to="/studio">Editar formas e importar STL <ArrowRight size={14}/></Link><Link to="/modelo-ia">Oficina de modelos GLB <ArrowRight size={14}/></Link><Link to="/projetos">Meus projetos <ArrowRight size={14}/></Link></footer>
+      <footer className="creation-footer"><span><Box size={16}/> Mais possibilidades na sua oficina</span><Link to="/workbench">Editar formas e importar STL <ArrowRight size={14}/></Link><Link to="/modelo-ia">Oficina de modelos GLB <ArrowRight size={14}/></Link><Link to="/projetos">Meus projetos <ArrowRight size={14}/></Link></footer>
     </main>
   </div>;
 }

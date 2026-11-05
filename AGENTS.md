@@ -4,6 +4,7 @@
 Entregar melhorias reais e verificáveis no Studio 3D Express'Arte, sem recriar módulos existentes. Este arquivo orienta Codex, OpenCode e outras ferramentas que reconheçam AGENTS.md; não instala modelos ou altera o ChatGPT.
 
 ## Arquitetura e trabalho existente
+- O editor principal indicado pelo usuário é o Model Workbench escuro em `/workbench` (`src/components/studio/ModelWorkbench.tsx`). Consulte `docs/EDITOR_ATUAL.md`. `/studio` é legado/guiado; novas telas de criação complementam, sem substituir, esse editor. Atalhos "Editor 3D" devem abrir `/workbench`.
 - Antes de continuar, leia `README.md` (Central do Projeto), `docs/VALIDACAO_ATUAL.md` e o PR central #34. A branch de integração oficial é `integration/studio-v7.5-candidate`; não criar outra candidata para o mesmo objetivo.
 - Atualize a central com resultados, bloqueios e próximos passos ao concluir cada etapa. Uma conversa anterior não substitui o estado confirmado no repositório.
 - Aplicação: React 19, TypeScript, Three.js, TanStack Start e Vite.
