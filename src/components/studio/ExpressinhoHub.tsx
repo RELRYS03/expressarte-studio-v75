@@ -39,7 +39,7 @@ export default function ExpressinhoHub() {
       <header className="expressinho-hub-heading">
         <div>
           <h1><Sparkles size={22} /> Expressinho 3D</h1>
-          <p>Criação local com Blender, auditoria de malha e preparação de STL. Sem enviar arquivos para serviços externos e sem consumir créditos de IA.</p>
+          <p>Crie a partir de imagem com TripoSR local, abra o modelo na oficina e prepare o STL. Blender, auditoria de malha e ferramentas existentes continuam disponíveis.</p>
         </div>
         <Button variant="outline" disabled={checking} onClick={() => void checkBridge()}>
           <Activity size={16} /> {checking ? "Verificando…" : "Verificar Blender local"}
@@ -53,7 +53,7 @@ export default function ExpressinhoHub() {
       )}
       <div className="expressinho-local-note">
         <strong>Como funciona</strong>
-        <p>Os arquivos são processados no Blender instalado neste computador. A ponte escuta somente em 127.0.0.1:8766. A geração real desta etapa está limitada a chaveiros circulares e em formato de coração; os outros tipos produzem apenas um plano estruturado para revisão.</p>
+        <p>Imagem → modelo completo usa o TripoSR instalado neste computador, sem créditos de API. A ponte escuta em 127.0.0.1:8766. Texto → Blender gera chaveiros circulares ou de coração; personagens por texto ainda precisam de um motor de geração operacional. O botão Preparar plano produz apenas um rascunho JSON.</p>
       </div>
       <ExpressinhoCreation />
       <ExpressinhoAudit />

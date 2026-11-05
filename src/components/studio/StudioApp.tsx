@@ -540,6 +540,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const [imported, setImported] = useState<{ name: string; geometry: BufferGeometry } | null>(null);
   const [undoGeometry, setUndoGeometry] = useState<BufferGeometry | null>(null);
   const importStlRef = useRef<HTMLInputElement>(null);
+  const importGlbRef = useRef<HTMLInputElement>(null);
   const mergeStlRef = useRef<HTMLInputElement>(null);
   const solidStlRef = useRef<HTMLInputElement>(null);
   const svgImportRef = useRef<HTMLInputElement>(null);
@@ -592,8 +593,15 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
         if (format === "stl") {
           const { STLExporter } = await import("three/examples/jsm/exporters/STLExporter.js");
           const data = new STLExporter().parse(model, { binary: true });
+          // Binary STL: 80-byte header, 4-byte triangle count, 50 bytes per triangle.
+          const bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+          if (bytes.byteLength < 84) throw new Error("O STL gerado está incompleto.");
+          const triangleCount = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(80, true);
+          if (triangleCount === 0 || bytes.byteLength !== 84 + triangleCount * 50) {
+            throw new Error("O STL gerado não contém uma malha triangular válida.");
+          }
           downloadBlob(
-            new Blob([new Uint8Array(data.buffer)], { type: "application/sla" }),
+            new Blob([bytes], { type: "application/sla" }),
             imported
               ? `ExpressArte-${imported.name.replace(/\.stl$/i, "").replace(/[^a-zA-Z0-9_-]+/g, "-")}.stl`
               : "ExpressArte-medalha.stl",
@@ -618,8 +626,8 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       } finally {
         disposeModel(model);
       }
-    } catch {
-      notify("Não foi possível exportar o modelo. Tente novamente.");
+    } catch (error) {
+      notify(error instanceof Error ? `Falha ao exportar: ${error.message}` : "Não foi possível exportar o modelo.");
     } finally {
       setBusy(false);
     }
@@ -794,6 +802,63 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     } catch (error) {
       notify(error instanceof Error ? error.message : "Falha ao converter SVG.");
     } finally { setBusy(false); }
+  };
+  const importGlb = async (file: File) => {
+    if (!/\\.glb$/i.test(file.name) || file.size === 0 || file.size > 50 * 1024 * 1024) {
+      notify("Selecione um GLB de até 50 MB.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const THREE = await import("three");
+      const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
+      const scene = (await new GLTFLoader().parseAsync(await file.arrayBuffer(), "")).scene;
+      scene.updateMatrixWorld(true);
+      const vertices: number[] = [];
+      scene.traverse(node => {
+        if (!(node instanceof THREE.Mesh)) return;
+        const geometry = node.geometry as BufferGeometry | undefined;
+        if (!geometry?.getAttribute("position")) return;
+        const copy = geometry.index ? geometry.toNonIndexed() : geometry.clone();
+        try {
+          copy.applyMatrix4(node.matrixWorld);
+          const positions = copy.getAttribute("position");
+          if (vertices.length + positions.count * 3 > 9_000_000) {
+            throw new Error("GLB muito complexo: limite de 1 milhão de triângulos.");
+          }
+          for (let i = 0; i < positions.count; i++) {
+            vertices.push(positions.getX(i), positions.getY(i), positions.getZ(i));
+          }
+        } finally {
+          copy.dispose();
+        }
+      });
+      if (vertices.length < 9 || vertices.length % 9 !== 0 || !vertices.every(Number.isFinite)) {
+        throw new Error("O GLB não contém uma malha triangular válida.");
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.computeVertexNormals();
+      geometry.computeBoundingBox();
+      const box = geometry.boundingBox;
+      if (!box || ![box.min.x, box.min.y, box.min.z, box.max.x, box.max.y, box.max.z].every(Number.isFinite)) {
+        geometry.dispose();
+        throw new Error("O GLB contém coordenadas inválidas.");
+      }
+      setUndoGeometry(old => { old?.dispose(); return null; });
+      setImported(old => {
+        old?.geometry.dispose();
+        return { name: file.name.replace(/\\.glb$/i, ".stl"), geometry };
+      });
+      setView("3d");
+      setZoom(100);
+      setReset(value => value + 1);
+      notify("GLB importado. Confira escala em mm, espessura e se a malha está fechada antes de exportar STL.");
+    } catch (error) {
+      notify(error instanceof Error ? `Falha ao importar GLB: ${error.message}` : "Não foi possível abrir o GLB.");
+    } finally {
+      setBusy(false);
+    }
   };
   const importStl = async (file: File) => {
     if (!file.name.toLowerCase().endsWith(".stl") || file.size > 20 * 1024 * 1024) {
@@ -1137,6 +1202,17 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               </Button>
               <input
                 type="file"
+                accept=".glb,model/gltf-binary"
+                className="hidden"
+                ref={importGlbRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void importGlb(file);
+                  e.currentTarget.value = "";
+                }}
+              />
+              <input
+                type="file"
                 accept=".stl"
                 className="hidden"
                 ref={importStlRef}
@@ -1219,6 +1295,9 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               </Button>
               <Button variant="outline" onClick={() => importStlRef.current?.click()}>
                 <Upload /> Abrir STL
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => importGlbRef.current?.click()}>
+                <Upload /> Abrir GLB (Tripo/Blender)
               </Button>
               <Button
                 variant="outline"

@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { Vector3 } from "three";
+import { Group, Mesh, MeshStandardMaterial, Vector3 } from "three";
+import { STLExporter } from "three/examples/jsm/exporters/STLExporter.js";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { createStarterGeometry, type StarterPreset } from "./starter-presets";
 
 describe("starter models in millimetres", () => {
@@ -42,4 +44,41 @@ describe("parametric tools", () => {
     expect(() => createStarterGeometry("round-keychain", { holeDiameter: 25 })).toThrow();
     expect(() => createStarterGeometry("nameplate", { thickness: 0 })).toThrow();
   });
+});
+
+describe("keychain STL export regression", () => {
+  for (const preset of ["round-keychain", "rectangle-keychain", "hex-keychain"] as const) {
+    it(`exports and reopens a valid binary STL for ${preset}`, () => {
+      const source = createStarterGeometry(preset, {
+        width: 45, height: 30, thickness: 3, holeDiameter: 5,
+      });
+      const material = new MeshStandardMaterial();
+      const group = new Group();
+      group.add(new Mesh(source, material));
+      try {
+        const binary = new STLExporter().parse(group, { binary: true });
+        const bytes = new Uint8Array(binary.buffer, binary.byteOffset, binary.byteLength);
+        expect(bytes.byteLength).toBeGreaterThan(84);
+        const count = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(80, true);
+        expect(count).toBeGreaterThan(0);
+        expect(bytes.byteLength).toBe(84 + count * 50);
+        const loaded = new STLLoader().parse(bytes.buffer.slice(
+          bytes.byteOffset, bytes.byteOffset + bytes.byteLength,
+        ) as ArrayBuffer);
+        try {
+          expect(loaded.getAttribute("position").count).toBe(count * 3);
+          expect(Array.from(loaded.getAttribute("position").array).every(Number.isFinite)).toBe(true);
+          loaded.computeBoundingBox();
+          const size = loaded.boundingBox!.getSize(new Vector3());
+          expect(size.x).toBeCloseTo(preset === "hex-keychain" ? 45 * Math.sqrt(3) / 2 : 45, 3);
+          expect(size.z).toBeCloseTo(3, 3);
+        } finally {
+          loaded.dispose();
+        }
+      } finally {
+        source.dispose();
+        material.dispose();
+      }
+    });
+  }
 });

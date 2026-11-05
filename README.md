@@ -1,80 +1,63 @@
-# Express’Arte Studio v7.5 — Imagem para 3D
+# Express’Arte — Central do Projeto
 
-**COMECE AQUI:** veja [`README_IMAGEM_PARA_3D.md`](README_IMAGEM_PARA_3D.md) para usar o novo conversor de imagens para STL/3MF, com prévia 3D e medidas em milímetros. Veja [`RELATORIO_V7_5.md`](RELATORIO_V7_5.md) para o estado dos testes e limitações.
+**Comece sempre por esta página.** Aqui estão os endereços, o código em integração, as verificações e as próximas etapas. Atualizada em **05/11/2026**.
 
-O programa continua com os quatro pilares Express’Arte (Studio/editor 3D, Catálogo, Comunidade e Calculadora), mantendo também Formas, Projetos e Mesh Doctor. A página inicial agora é Imagem para 3D; o editor de formas anterior está em `/studio`.
+**Objetivo:** criar objetos e personagens 3D a partir de imagem, texto ou ambos, visualizar, ajustar medidas e preparar arquivos para impressão. Sem contratar serviços ou consumir créditos sem autorização.
 
----
+## Onde encontrar
 
-# Express'Arte Studio 3D — v7.4 (base web local)
-
-Projeto em **React 19 + TypeScript + Three.js + TanStack Start + Vite**. Esta entrega aperfeiçoa o código recebido, mantendo as telas anteriores, com um novo Catálogo e armazenamento de projetos no navegador.
-
-## Executar no Windows
-
-1. Instale **Node.js 22 ou superior**.
-2. Extraia **todo** o ZIP para uma pasta no PC.
-3. Dê dois cliques em `INICIAR_WINDOWS.bat` ou, no terminal dentro da pasta, execute `npm install` e `npm run dev -- --host 127.0.0.1`.
-4. Abra no navegador o endereço local mostrado no terminal. Na primeira execução, é necessário acesso à internet para baixar dependências do npm.
-5. Pressione `Ctrl+C` na janela do terminal para encerrar.
-
-Para usar corte fechado e união booleana do Blender 5.2, abra também `scripts/INICIAR_BLENDER_BRIDGE_WINDOWS.bat` e mantenha essa janela aberta. A ponte escuta somente em `127.0.0.1:8766` e aceita as origens locais do Studio. O botão **Verificar** no editor informa se ela está conectada.
-
-O projeto não inclui `node_modules`, banco de dados, backend Python ou executável pré-compilado. Para publicar o site público gratuitamente no Cloudflare Workers, siga [`README_IMAGEM_PARA_3D.md`](README_IMAGEM_PARA_3D.md).
-
-## Funcionalidades entregues
-
-| Área | Estado nesta base |
+| O que você procura | Lugar oficial |
 | --- | --- |
-| Studio 3D | 15 formas, texto, material, argola, borda, dimensões, preview WebGL |
-| Arquivos 3D | Importação STL até 20 MB; escala por eixo, rotação, espelho, centralização, corte plano e montagem de múltiplos corpos; corte fechado e união booleana via Blender local |
-| Projetos | Criação, edição e exclusão em `localStorage`; importa JSON antigo e o novo envelope v7.4, gera backup JSON |
-| Catálogo | Cadastra produtos, categoriza, prepara carrinho local e abre mensagem de pedido no WhatsApp para escolha de contato |
-| Calculadora | Material, energia, mão de obra, embalagem, manutenção, taxas e margem real sobre preço de venda |
-| Mesh Doctor | Diagnóstico básico de triangulação, dimensões e contagem de arestas, sem reparo automático |
-| Catálogo de ideias | 602 ideias em 24 categorias, cinco links de pesquisa de modelos por ideia e capas gráficas; o item “Gato articulado” usa render do STL anexado feito no Blender 5.2 |
-| Comunidade | Rascunhos privados no navegador e exportação de backup JSON, **não é mural compartilhado** |
-| Identidade visual | Paleta creme, café e caramelo, ajustes responsivos |
+| Abrir o Studio publicado | [Express’Arte Studio](https://expressarte-studio-teste.relrys17.workers.dev/) |
+| Acompanhar todo o desenvolvimento | [PR central #34](https://github.com/RELRYS03/expressarte-studio-v75/pull/34) |
+| Código consolidado em validação | [integration/studio-v7.5-candidate](https://github.com/RELRYS03/expressarte-studio-v75/tree/integration/studio-v7.5-candidate) |
+| Catálogo publicado, preservado separadamente | [Catálogo Express’Arte](https://relrys03.github.io/catalogoExpressarte/) |
+| Configurar geração local por imagem | [Guia TripoSR](docs/EXPRESSINHO_TRIPOSR_LOCAL.md) |
+| Executar, autenticar e publicar o Studio | [Guia de execução e publicação](README_IMAGEM_PARA_3D.md) |
+| Localizar trabalho anterior | [Mapa de branches e PRs](docs/MAPA_DO_TRABALHO.md) |
 
-## Atenção antes de produzir ou vender
+**Publicado e em validação são estados diferentes.** O código consolidado nesta branch ainda não foi publicado. `main`, o site atual, o catálogo e o Netlify antigo permanecem preservados.
 
-- Os projetos, rascunhos e produtos são salvos **apenas no navegador e perfil de usuário atual**. Limpar dados do site remove esse armazenamento. Guarde o JSON das criações e faça cópia do catálogo conforme necessário.
-- STL importado **não vira projeto paramétrico editável**; operações de malha ficam na memória até exportar. Exporte a malha que deseja guardar.
-- O corte plano direto no navegador deixa a face aberta. Use o corte fechado do Blender ou confira/repare no **Bambu Studio** ou outro fatiador antes de imprimir.
-- Montar vários corpos num STL não é união booleana. Use a ação **União booleana com Blender** se os volumes devem virar uma única superfície.
-- O botão WhatsApp apenas prepara a mensagem: o usuário seleciona o contato e confirma o envio. Frete, pagamento e disponibilidade **não** são automatizados.
-- Integrações Shopee/Mercado Livre, contas individuais, comunidade multiusuário, RK10 e reparo automático geral de malhas **não** estão implementados neste código. O acesso de produção pode ser protegido por uma senha compartilhada da equipe.
+## O que está pronto e o que falta
 
-## Principais arquivos
+| Recurso | Estado da candidata | Onde fica no aplicativo |
+| --- | --- | --- |
+| Imagem → relevo, silhueta ou litofania | Código existente, com testes; não é reconstrução de personagem completo | `/` |
+| Imagem → modelo completo com TripoSR local | Integração reunida; geração real depende do motor instalado no computador e ainda precisa de validação | `/expressinho` |
+| Modelo GLB → visualizar, medir e exportar STL/GLB | Oficina existente conectada ao TripoSR; falta teste visual e de impressão | `/modelo-ia` |
+| Texto → chaveiro simples no Blender | Código existente para círculo/coração; execução local precisa de homologação | `/expressinho` |
+| Texto → personagem ou objeto livre; imagem + texto juntos | **Ainda não operacional.** Trabalho experimental preservado no mapa; falta motor gratuito confirmado e integração validada | Próxima etapa |
+| Editor, projetos, calculadora, catálogo e ferramentas de malha | Reunidos na candidata; projetos e catálogo do Studio continuam locais ao navegador | `/studio`, `/projetos`, `/calculadora`, `/catalogo` |
+| Correção do erro 503 no Cloudflare | Reunida e verificada no Worker compilado | Servidor |
+| Validação de STL de chaveiros | Reunida com testes de exportação; Bambu Studio pendente | Editor |
 
-- `src/components/studio/StudioApp.tsx`: navegação, controles do Studio, calculadora e Mesh Doctor.
-- `src/components/studio/ModelScene.tsx`: cena Three.js.
-- `src/lib/studio/model.ts`: geração de geometria.
-- `src/lib/studio/persistence.ts`: validação e armazenamento local.
-- `src/lib/studio/pricing.ts`: cálculo de custos, taxas e preço.
-- `src/components/studio/CatalogPage.tsx`: catálogo local e carrinho.
-- `src/components/studio/CommunityPage.tsx`: mural local de rascunhos.
+Uma resposta da FreeLLMAPI, um plano JSON ou um adaptador de API não prova que uma malha 3D foi gerada. TripoSR usa imagem; ele não usa texto para condicionar a geração.
 
-## Testes
+## Próxima execução
 
-Após instalar as dependências:
+1. Confirmar o TripoSR e a ponte no computador do usuário e gerar um objeto real a partir de imagem.
+2. Abrir o resultado na oficina, conferir medidas e exportar STL; validar no Bambu Studio.
+3. Definir e validar um motor para personagens por texto e, depois, imagem + texto. FreeLLMAPI/Ollama/REA continuam no trabalho de integração, sem presumir que estejam conectados.
+4. Homologar a candidata e só então promover para `main` e publicar com autorização.
+
+## Verificações reproduzíveis
+
+Requer Node.js 22.12+ e Python 3. Rode na raiz:
 
 ```bash
-npm run test
+npm ci
+npm test
 npm run build
-npm run lint
+node scripts/smoke-production.mjs
+python -m unittest discover -s tests
 ```
 
-A versão distribuída inclui código-fonte e não contém um build de produção pré-validado neste ambiente. Leia `RELATORIO_V7_4.md` para limitações e verificações realizadas.
+No Windows, `py -3` pode substituir `python`. Para abrir localmente: `npm run dev`. Para a ponte Blender: `py -3 scripts/blender_bridge.py`, com os caminhos configurados conforme o guia TripoSR.
 
+Os resultados desta consolidação estão em [VALIDACAO_ATUAL.md](docs/VALIDACAO_ATUAL.md). Testes automatizados não substituem geração com GPU, inspeção visual ou validação de impressão. O lint está bloqueado pela ausência preexistente de `eslint.config.js`.
 
-## Expressinho 3D — ferramentas locais com Blender
+## Regra de continuidade
 
-A rota `/expressinho` reúne o planejador inicial, geração local de chaveiros, auditoria STL e preparação de malhas.
+Esta página e o PR #34 são a referência para continuar o projeto em qualquer conversa ou ferramenta. Atualizar aqui as decisões, os bloqueios, os resultados e os links ao concluir cada etapa. Procurar primeiro o código existente; não abrir uma nova candidata para o mesmo objetivo. Segredos nunca entram neste documento ou no GitHub.
 
-1. Instale Blender 5.2 e Python 3 no Windows.
-2. Se o Blender estiver no caminho padrão `C:\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe`, execute `scripts/INICIAR_BLENDER_BRIDGE_WINDOWS.bat`. Para outro local, defina `EXPRESSARTE_BLENDER_EXE`.
-3. Mantenha a janela da ponte aberta. Na página Expressinho, clique em **Verificar Blender local**.
-4. A ponte Expressinho escuta apenas em `127.0.0.1:8766`; o Mesh Workbench local é separado e usa `127.0.0.1:8767`.
-
-**Limites desta etapa:** geração geométrica real no Blender está disponível somente para chaveiros circulares e em coração, entre 30 e 150 mm. Os outros tipos geram um plano estruturado, não um modelo 3D final. Auditoria STL aceita até 20 MB; preparação aceita até 150 MB. A preparação oferece aparo do fundo ou redução de faces e não garante paredes, furos, manifold ou imprimibilidade. O arquivo original não é sobrescrito. Revise sempre o resultado no Bambu Studio antes de imprimir. Nenhuma chamada paga de IA é feita nesta etapa.
+[Instruções técnicas para agentes](AGENTS.md) · [README anterior, somente histórico](docs/README_LEGADO.md)
