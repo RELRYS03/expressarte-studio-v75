@@ -16,6 +16,7 @@
 | Executar, autenticar e publicar o Studio | [Guia de execução e publicação](README_IMAGEM_PARA_3D.md) |
 | Localizar trabalho anterior | [Mapa de branches e PRs](docs/MAPA_DO_TRABALHO.md) |
 | Editor escuro da referência do usuário | [Model Workbench: versão e commits](docs/EDITOR_ATUAL.md), rota `/workbench` |
+| Teste com a imagem do colecionável de terno e café | [Arquivos, método e validação](docs/TESTE_COLECIONAVEL_TERNO_CAFE.md) |
 
 **Publicado e em validação são estados diferentes.** O código consolidado nesta branch ainda não foi publicado. `main`, o site atual, o catálogo e o Netlify antigo permanecem preservados.
 
