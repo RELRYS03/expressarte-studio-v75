@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { buildModel, disposeModel, sceneColor, type ModelConfig } from "@/lib/studio/model";
+import { A1_BUILD_PLATE } from "@/lib/studio/build-plate";
 export default function ModelScene({
   config,
   importedGeometry,
@@ -60,16 +61,23 @@ export default function ModelScene({
     const fill = new THREE.DirectionalLight(0xffd59d, 1.7);
     fill.position.set(80, 30, -60);
     scene.add(fill);
+    // Bambu Lab A1: represent the real 256 × 256 mm printable area.
+    // Keep the grid slightly above the plate and below models resting at Y = 0.
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(1500, 1500),
-      new THREE.MeshStandardMaterial({ color: sceneColor("--viewport"), roughness: 1 }),
+      new THREE.PlaneGeometry(A1_BUILD_PLATE.widthMm, A1_BUILD_PLATE.depthMm),
+      new THREE.MeshStandardMaterial({ color: sceneColor("--viewport"), roughness: 1, side: THREE.DoubleSide }),
     );
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.8;
+    floor.position.y = A1_BUILD_PLATE.floorY;
     floor.receiveShadow = true;
     scene.add(floor);
-    const grid = new THREE.GridHelper(1000, 100, sceneColor("--grid"), sceneColor("--grid"));
-    grid.position.y = -0.7;
+    const grid = new THREE.GridHelper(
+      A1_BUILD_PLATE.widthMm,
+      A1_BUILD_PLATE.gridDivisions,
+      sceneColor("--grid"),
+      sceneColor("--grid"),
+    );
+    grid.position.y = A1_BUILD_PLATE.gridY;
     scene.add(grid);
     sceneRef.current = { scene, camera, controls, model: null };
     const resize = () => {

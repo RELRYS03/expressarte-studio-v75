@@ -1,3 +1,11 @@
+import { editSolid, solidPositions } from "@/lib/studio/solid-mesh-client";
+import ModelWorkbench from "./ModelWorkbench";
+import { createStarterGeometry, type StarterPreset } from "@/lib/studio/starter-presets";
+import { geometryFromSvg } from "@/lib/studio/svg-geometry";
+import { placeRaisedLogo } from "@/lib/studio/logo-placement";
+import { createLedChannelPart } from "@/lib/studio/led-channel";
+import { createOrganizerGeometry } from "@/lib/studio/organizer";
+import type { SolidOperation } from "@/lib/studio/solid-mesh";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
 import { Link, ClientOnly } from "@tanstack/react-router";
@@ -8,6 +16,7 @@ import {
   Calculator,
   Users,
   Stethoscope,
+  ClipboardCheck,
   Plus,
   Download,
   Search,
@@ -21,6 +30,7 @@ import {
   Layers,
   Type,
   Palette,
+  Sparkles,
   Settings2,
   Monitor,
   FileBox,
@@ -37,6 +47,7 @@ import {
   Scaling,
   Combine,
   Undo2,
+  Grid3X3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +60,8 @@ import {
   type ModelConfig,
 } from "@/lib/studio/model";
 import { ShapeIcon } from "./ShapeIcon";
+import Text3DPanel from "./Text3DPanel";
+import Nameplate3DPanel from "./Nameplate3DPanel";
 import { useStudio } from "./StudioProvider";
 import { coerceConfig } from "@/lib/studio/persistence";
 import { defaultPricing, calculatePricing } from "@/lib/studio/pricing";
@@ -64,20 +77,23 @@ import CatalogPage from "./CatalogPage";
 import CommunityPage from "./CommunityPage";
 const ModelScene = lazy(() => import("./ModelScene"));
 export type StudioPage =
-  "imagem" | "studio" | "formas" | "projetos" | "calculadora" | "mesh" | "comunidade" | "catalogo";
+  "imagem" | "studio" | "workbench" | "formas" | "projetos" | "calculadora" | "mesh" | "comunidade" | "catalogo" | "qa";
 const nav = [
   { to: "/", label: "Imagem para 3D", icon: ImageUp, page: "imagem" },
   { to: "/studio", label: "Studio 3D", icon: Box, page: "studio" },
+  { to: "/workbench", label: "Editor avançado", icon: Box, page: "workbench" },
   { to: "/formas", label: "Formas", icon: Shapes, page: "formas" },
   { to: "/catalogo", label: "Catálogo", icon: Store, page: "catalogo" },
   { to: "/projetos", label: "Meus projetos", icon: FolderOpen, page: "projetos" },
   { to: "/calculadora", label: "Calculadora", icon: Calculator, page: "calculadora" },
   { to: "/mesh-doctor", label: "Mesh Doctor", icon: Stethoscope, page: "mesh" },
+  { to: "/qa-studio", label: "QA Studio · Testes", icon: ClipboardCheck, page: "qa" },
   { to: "/comunidade", label: "Comunidade", icon: Users, page: "comunidade" },
 ] as const;
 const titles: Record<StudioPage, [string, string]> = {
   imagem: ["Imagem para 3D", "Converta imagens em relevo, silhueta ou litofania."],
   studio: ["Studio 3D", "Sua ideia ganha forma. Crie, personalize e prepare para imprimir."],
+  workbench: ["Editor avançado", "Modelagem por objetos, transformações e edição de malha."],
   formas: ["Biblioteca de formas", "Escolha o ponto de partida da sua próxima criação."],
   projetos: ["Meus projetos", "Criações guardadas neste navegador, com backup JSON."],
   catalogo: [
@@ -86,6 +102,7 @@ const titles: Record<StudioPage, [string, string]> = {
   ],
   calculadora: ["Calculadora de impressão", "Materiais, energia e tempo de produção."],
   mesh: ["Mesh Doctor", "Inspeção de arquivos STL para impressão 3D."],
+  qa: ["QA Studio", "Testes, evidências e homologação de impressão 3D."],
   comunidade: ["Comunidade", "Seu mural local de ideias, projetos e publicações."],
 };
 function RangeField({
@@ -172,14 +189,24 @@ function MeshEditPanel({
   onMerge,
   onBooleanUnion,
   onBlenderCut,
+  onDiagnose,
+  diagnostic,
+  diagnoseBusy,
+  onSolidCut,
+  onSolidUnion,
   notify,
 }: {
   name: string;
   geometry: BufferGeometry;
   onCommit: (next: BufferGeometry, message: string) => void;
+  onSolidUnion: () => void;
+  onSolidCut: (axis: MeshAxis, offset: number, keepPositive: boolean) => void;
   onMerge: () => void;
   onBooleanUnion: () => void;
   onBlenderCut: (axis: MeshAxis, offset: number, keepPositive: boolean) => void;
+  onDiagnose: () => void;
+  diagnostic: { vertices: number; edges: number; faces: number; boundary_edges: number; nonmanifold_edges: number; finite: boolean; } | null;
+  diagnoseBusy: boolean;
   notify: (message: string) => void;
 }) {
   const [dimensions, setDimensions] = useState({ x: "", y: "", z: "" });
@@ -188,6 +215,14 @@ function MeshEditPanel({
   const [cutPosition, setCutPosition] = useState(0);
   const [keepPositive, setKeepPositive] = useState(true);
   const [bridgeAvailable, setBridgeAvailable] = useState(false);
+  const [meshWorkbenchAvailable, setMeshWorkbenchAvailable] = useState(false);
+  const checkMeshWorkbench = useCallback(async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8767/v1/health", { signal: AbortSignal.timeout(2500) });
+      const status = await response.json() as { available?: boolean };
+      setMeshWorkbenchAvailable(response.ok && status.available === true);
+    } catch { setMeshWorkbenchAvailable(false); }
+  }, []);
   const checkBridge = useCallback(async () => {
     try {
       const response = await fetch("http://127.0.0.1:8766/v1/health", {
@@ -202,14 +237,15 @@ function MeshEditPanel({
   useEffect(() => {
     // Atualiza o estado da ponte quando ela inicia depois do Studio.
     void checkBridge();
-    const refresh = () => { void checkBridge(); };
+    void checkMeshWorkbench();
+    const refresh = () => { void checkBridge(); void checkMeshWorkbench(); };
     window.addEventListener("focus", refresh);
     const timer = window.setInterval(refresh, 10000);
     return () => {
       window.removeEventListener("focus", refresh);
       window.clearInterval(timer);
     };
-  }, [checkBridge]);
+  }, [checkBridge, checkMeshWorkbench]);
   const current = geometryDimensions(geometry);
   const box = geometry.boundingBox;
   const min = box ? box.min[axis] : 0;
@@ -257,6 +293,20 @@ function MeshEditPanel({
           </strong>
         </span>
       </div>
+      <section className="mesh-tool-section">
+        <h3><Stethoscope size={15} /> Diagnóstico Mesh Workbench</h3>
+        <p className="mesh-caution">{meshWorkbenchAvailable ? "Análise local avançada da topologia pelo Blender. Não modifica a peça." : "Inicie a ponte Mesh Workbench (porta 8767) para habilitar o diagnóstico."}</p>
+        <Button className="w-full" size="sm" variant="outline" disabled={!meshWorkbenchAvailable || diagnoseBusy} onClick={onDiagnose}>
+          {diagnoseBusy ? "Analisando malha…" : meshWorkbenchAvailable ? "Diagnosticar malha com Mesh Workbench" : "Mesh Workbench desconectado"}
+        </Button>
+        {diagnostic && <div className="mesh-stats-mini" role="status">
+          <span>Vértices<strong>{diagnostic.vertices.toLocaleString("pt-BR")}</strong></span>
+          <span>Arestas abertas<strong>{diagnostic.boundary_edges.toLocaleString("pt-BR")}</strong></span>
+          <span>Arestas não manifold<strong>{diagnostic.nonmanifold_edges.toLocaleString("pt-BR")}</strong></span>
+          <span>Faces<strong>{diagnostic.faces.toLocaleString("pt-BR")}</strong></span>
+          <span>Geometria finita<strong>{diagnostic.finite ? "Sim" : "Não"}</strong></span>
+        </div>}
+      </section>
       <section className="mesh-tool-section">
         <h3>
           <Scaling size={15} /> Redimensionar
@@ -430,8 +480,12 @@ function MeshEditPanel({
         >
           <Scissors size={14} /> Corte fechado com Blender
         </Button>
+        <Button className="w-full" size="sm" onClick={() => onSolidCut(axis, cutPosition, keepPositive)}>
+          Corte fechado no navegador
+        </Button>
+        <p className="mesh-caution">Operações locais com Manifold; exigem sólidos fechados. Não reparam furos.</p>
         <p className="mesh-caution">
-          O corte remove a outra metade e deixa a borda aberta. Confira e repare no fatiador antes
+          Aplicar corte remove a outra metade e deixa a borda aberta. Confira e repare no fatiador antes
           de imprimir.
         </p>
       </section>
@@ -442,11 +496,14 @@ function MeshEditPanel({
         <Button className="w-full" variant="outline" size="sm" onClick={onMerge}>
           Adicionar outro STL como corpo
         </Button>
+        <Button className="w-full" size="sm" onClick={onSolidUnion}>
+          União sólida no navegador
+        </Button>
         <Button className="w-full" size="sm" disabled={!bridgeAvailable} onClick={onBooleanUnion}>
           União booleana com Blender
         </Button>
         <p className="mesh-caution">
-          Agrupa corpos no mesmo arquivo; não funde sobreposições numa única superfície sólida.
+          Adicionar como corpo apenas agrupa. A união sólida funde sobreposições, usa a posição original do segundo STL e exige peças fechadas.
         </p>
       </section>
     </div>
@@ -464,6 +521,14 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const [dialog, setDialog] = useState<"export" | "blender" | "help" | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [solidBusy, setSolidBusy] = useState(false);
+  const [meshWorkbenchBusy, setMeshWorkbenchBusy] = useState(false);
+  const [meshWorkbenchDiagnostic, setMeshWorkbenchDiagnostic] = useState<{ vertices: number; edges: number; faces: number; boundary_edges: number; nonmanifold_edges: number; finite: boolean; } | null>(null);
+  const solidLock = useRef(false);
+  const [starterWidth, setStarterWidth] = useState(50);
+  const [starterHeight, setStarterHeight] = useState(32);
+  const [starterThickness, setStarterThickness] = useState(3);
+  const [starterHole, setStarterHole] = useState(5);
   const [mesh, setMesh] = useState<{
     name: string;
     triangles: number;
@@ -475,7 +540,11 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
   const [imported, setImported] = useState<{ name: string; geometry: BufferGeometry } | null>(null);
   const [undoGeometry, setUndoGeometry] = useState<BufferGeometry | null>(null);
   const importStlRef = useRef<HTMLInputElement>(null);
+  const importGlbRef = useRef<HTMLInputElement>(null);
   const mergeStlRef = useRef<HTMLInputElement>(null);
+  const solidStlRef = useRef<HTMLInputElement>(null);
+  const svgImportRef = useRef<HTMLInputElement>(null);
+  const logoOverlayRef = useRef<HTMLInputElement>(null);
   const booleanStlRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -524,9 +593,18 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
         if (format === "stl") {
           const { STLExporter } = await import("three/examples/jsm/exporters/STLExporter.js");
           const data = new STLExporter().parse(model, { binary: true });
+          // Binary STL: 80-byte header, 4-byte triangle count, 50 bytes per triangle.
+          const bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+          if (bytes.byteLength < 84) throw new Error("O STL gerado está incompleto.");
+          const triangleCount = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(80, true);
+          if (triangleCount === 0 || bytes.byteLength !== 84 + triangleCount * 50) {
+            throw new Error("O STL gerado não contém uma malha triangular válida.");
+          }
           downloadBlob(
-            new Blob([new Uint8Array(data.buffer)], { type: "application/sla" }),
-            "ExpressArte-medalha.stl",
+            new Blob([bytes], { type: "application/sla" }),
+            imported
+              ? `ExpressArte-${imported.name.replace(/\.stl$/i, "").replace(/[^a-zA-Z0-9_-]+/g, "-")}.stl`
+              : "ExpressArte-medalha.stl",
           );
         } else if (format === "obj") {
           const { OBJExporter } = await import("three/examples/jsm/exporters/OBJExporter.js");
@@ -548,8 +626,236 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       } finally {
         disposeModel(model);
       }
-    } catch {
-      notify("Não foi possível exportar o modelo. Tente novamente.");
+    } catch (error) {
+      notify(error instanceof Error ? `Falha ao exportar: ${error.message}` : "Não foi possível exportar o modelo.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const createLedPrototype = (part: "frame" | "lid") => {
+    if (busy || solidLock.current) return;
+    try {
+      const geometry = createLedChannelPart(part, {
+        width: starterWidth,
+        height: starterHeight,
+        depth: Math.max(5, starterThickness * 5),
+        wall: 2,
+      });
+      setUndoGeometry(old => { old?.dispose(); return null; });
+      setImported(old => {
+        old?.geometry.dispose();
+        return { name: `led-channel-${part}.stl`, geometry };
+      });
+      setView("3d"); setZoom(100); setReset(v => v + 1);
+      notify("Protótipo de canal LED criado. Exporte peça e tampa separadamente; confira encaixes e fatiamento.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Dimensões de canal LED inválidas.");
+    }
+  };
+  const createOrganizer = async () => {
+    if (busy || solidLock.current) return;
+    solidLock.current = true;
+    setBusy(true);
+    setSolidBusy(true);
+    try {
+      const geometry = await createOrganizerGeometry();
+      setUndoGeometry((old) => {
+        old?.dispose();
+        return null;
+      });
+      setImported((old) => {
+        old?.geometry.dispose();
+        return { name: "organizador-220x140x40.stl", geometry };
+      });
+      setView("3d");
+      setZoom(100);
+      setReset((value) => value + 1);
+      notify("Organizador 220 × 140 × 40 mm criado: um canal longo e três compartimentos. Revise o encaixe e o fatiamento no Bambu Studio.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível gerar o organizador.");
+    } finally {
+      solidLock.current = false;
+      setBusy(false);
+      setSolidBusy(false);
+    }
+  };
+  const createStarter = (preset: StarterPreset) => {
+    if (busy || solidLock.current) return;
+    let geometry: BufferGeometry;
+    try {
+      geometry = createStarterGeometry(preset, {
+        width: starterWidth, height: starterHeight,
+        thickness: starterThickness, holeDiameter: starterHole,
+      });
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Parâmetros inválidos.");
+      return;
+    }
+    setUndoGeometry((old) => { old?.dispose(); return null; });
+    setImported((old) => {
+      old?.geometry.dispose();
+      return { name: preset + ".stl", geometry };
+    });
+    setView("3d");
+    setZoom(100);
+    setReset((v) => v + 1);
+    notify("Modelo inicial criado. Personalize, corte ou exporte como STL.");
+  };
+  const createTextModel = (geometry: BufferGeometry, filename: string) => {
+    if (busy || solidLock.current) {
+      geometry.dispose();
+      return;
+    }
+    setUndoGeometry((old) => {
+      old?.dispose();
+      return null;
+    });
+    setImported((old) => {
+      old?.geometry.dispose();
+      return { name: filename, geometry };
+    });
+    setView("3d");
+    setZoom(100);
+    setReset((value) => value + 1);
+    notify("Texto 3D criado. Exporte em STL e confira as letras e o fatiamento no Bambu Studio.");
+  };
+  const createNameplateModel = async (
+    base: BufferGeometry,
+    raisedText: BufferGeometry,
+    filename: string,
+  ) => {
+    if (busy || solidLock.current) {
+      base.dispose();
+      raisedText.dispose();
+      return;
+    }
+    solidLock.current = true;
+    setBusy(true);
+    setSolidBusy(true);
+    let result: BufferGeometry | undefined;
+    try {
+      result = await editSolid(solidPositions(base), {
+        kind: "union",
+        second: solidPositions(raisedText),
+      });
+      setUndoGeometry((old) => {
+        old?.dispose();
+        return null;
+      });
+      const completedGeometry = result;
+      result = undefined;
+      setImported((old) => {
+        old?.geometry.dispose();
+        return { name: filename, geometry: completedGeometry };
+      });
+      setView("3d");
+      setZoom(100);
+      setReset((value) => value + 1);
+      notify("Placa criada: letras e base unidas em um único sólido Manifold. Confira no Bambu Studio.");
+    } catch (error) {
+      result?.dispose();
+      notify(error instanceof Error ? error.message : "Não foi possível unir as letras à base.");
+    } finally {
+      base.dispose();
+      raisedText.dispose();
+      solidLock.current = false;
+      setBusy(false);
+      setSolidBusy(false);
+    }
+  };
+  const applySvgLogo = async (file: File) => {
+    if (!imported || busy || solidLock.current) return;
+    if (!file.name.toLowerCase().endsWith(".svg") || file.size > 2_000_000) {
+      notify("Escolha um SVG de até 2 MB."); return;
+    }
+    solidLock.current = true;
+    setBusy(true); setSolidBusy(true);
+    let logo: BufferGeometry | undefined;
+    try {
+      logo = geometryFromSvg(await file.text(), starterWidth, starterThickness);
+      placeRaisedLogo(imported.geometry, logo);
+      const union = await editSolid(solidPositions(imported.geometry), {
+        kind: "union", second: solidPositions(logo),
+      });
+      commitMesh(union, "Logo aplicado com união sólida. Confira no Bambu Studio.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível aplicar o logo.");
+    } finally {
+      logo?.dispose(); solidLock.current = false; setBusy(false); setSolidBusy(false);
+    }
+  };
+  const importSvg = async (file: File) => {
+    if (busy || solidLock.current) return;
+    if (!file.name.toLowerCase().endsWith(".svg") || file.size > 2_000_000) {
+      notify("Escolha um SVG de até 2 MB."); return;
+    }
+    setBusy(true);
+    try {
+      const geometry = geometryFromSvg(await file.text(), starterWidth, starterThickness);
+      setUndoGeometry(old => { old?.dispose(); return null; });
+      setImported(old => {
+        old?.geometry.dispose();
+        return { name: file.name.replace(/\.svg$/i, "") + ".stl", geometry };
+      });
+      setView("3d"); setZoom(100); setReset(v => v + 1);
+      notify("Logo SVG extrudado em 3D. Confira furos, contorno e fatiamento.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Falha ao converter SVG.");
+    } finally { setBusy(false); }
+  };
+  const importGlb = async (file: File) => {
+    if (!/\\.glb$/i.test(file.name) || file.size === 0 || file.size > 50 * 1024 * 1024) {
+      notify("Selecione um GLB de até 50 MB.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const THREE = await import("three");
+      const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
+      const scene = (await new GLTFLoader().parseAsync(await file.arrayBuffer(), "")).scene;
+      scene.updateMatrixWorld(true);
+      const vertices: number[] = [];
+      scene.traverse(node => {
+        if (!(node instanceof THREE.Mesh)) return;
+        const geometry = node.geometry as BufferGeometry | undefined;
+        if (!geometry?.getAttribute("position")) return;
+        const copy = geometry.index ? geometry.toNonIndexed() : geometry.clone();
+        try {
+          copy.applyMatrix4(node.matrixWorld);
+          const positions = copy.getAttribute("position");
+          if (vertices.length + positions.count * 3 > 9_000_000) {
+            throw new Error("GLB muito complexo: limite de 1 milhão de triângulos.");
+          }
+          for (let i = 0; i < positions.count; i++) {
+            vertices.push(positions.getX(i), positions.getY(i), positions.getZ(i));
+          }
+        } finally {
+          copy.dispose();
+        }
+      });
+      if (vertices.length < 9 || vertices.length % 9 !== 0 || !vertices.every(Number.isFinite)) {
+        throw new Error("O GLB não contém uma malha triangular válida.");
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.computeVertexNormals();
+      geometry.computeBoundingBox();
+      const box = geometry.boundingBox;
+      if (!box || ![box.min.x, box.min.y, box.min.z, box.max.x, box.max.y, box.max.z].every(Number.isFinite)) {
+        geometry.dispose();
+        throw new Error("O GLB contém coordenadas inválidas.");
+      }
+      setUndoGeometry(old => { old?.dispose(); return null; });
+      setImported(old => {
+        old?.geometry.dispose();
+        return { name: file.name.replace(/\\.glb$/i, ".stl"), geometry };
+      });
+      setView("3d");
+      setZoom(100);
+      setReset(value => value + 1);
+      notify("GLB importado. Confira escala em mm, espessura e se a malha está fechada antes de exportar STL.");
+    } catch (error) {
+      notify(error instanceof Error ? `Falha ao importar GLB: ${error.message}` : "Não foi possível abrir o GLB.");
     } finally {
       setBusy(false);
     }
@@ -616,6 +922,27 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     } catch {
       notify("Não foi possível combinar esse STL. Confira se a malha é válida.");
     }
+  };
+  const runSolidEdit = async (operation: SolidOperation | { kind: "union-file"; file: File }) => {
+    if (!imported || busy || solidLock.current) return;
+    solidLock.current = true;
+    setSolidBusy(true);
+    setBusy(true);
+    let part: BufferGeometry | undefined;
+    try {
+      let request: SolidOperation;
+      if (operation.kind === "union-file") {
+        if (!operation.file.name.toLowerCase().endsWith(".stl") || operation.file.size > 20 * 1024 * 1024)
+          throw new Error("Escolha um STL de até 20 MB.");
+        const { STLLoader } = await import("three/examples/jsm/loaders/STLLoader.js");
+        part = new STLLoader().parse(await operation.file.arrayBuffer());
+        request = { kind: "union", second: solidPositions(part) };
+      } else request = operation;
+      const result = await editSolid(solidPositions(imported.geometry), request);
+      commitMesh(result, request.kind === "cut" ? "Corte fechado aplicado. Confira antes de imprimir." : "União sólida aplicada. Confira antes de imprimir.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível processar a malha.");
+    } finally { part?.dispose(); solidLock.current = false; setSolidBusy(false); setBusy(false); }
   };
   const undoMesh = () => {
     if (!imported || !undoGeometry) return;
@@ -686,6 +1013,29 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       if (model) disposeModel(model);
       setBusy(false);
     }
+  };
+  const runMeshWorkbenchInspect = async () => {
+    if (!imported || busy || meshWorkbenchBusy) return;
+    setMeshWorkbenchBusy(true);
+    try {
+      const THREE = await import("three");
+      const { STLExporter } = await import("three/examples/jsm/exporters/STLExporter.js");
+      const group = new THREE.Group();
+      group.add(new THREE.Mesh(imported.geometry.clone(), new THREE.MeshStandardMaterial()));
+      const binary = new STLExporter().parse(group, { binary: true });
+      disposeModel(group);
+      const response = await fetch("http://127.0.0.1:8767/v1/inspect", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(190000),
+        body: JSON.stringify({ stlBase64: encodeBase64(new Uint8Array(binary.buffer, binary.byteOffset, binary.byteLength)) }),
+      });
+      const result = await response.json() as { error?: string; detail?: string; inspection?: { vertices: number; edges: number; faces: number; boundary_edges: number; nonmanifold_edges: number; finite: boolean; } };
+      if (!response.ok || !result.inspection) throw new Error(result.error || result.detail || "Falha no diagnóstico Mesh Workbench.");
+      setMeshWorkbenchDiagnostic(result.inspection);
+      notify("Diagnóstico Mesh Workbench concluído. A malha original não foi alterada.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Não foi possível executar o diagnóstico Mesh Workbench.");
+    } finally { setMeshWorkbenchBusy(false); }
   };
   const inspectFile = async (file: File) => {
     if (file.size > 20 * 1024 * 1024) {
@@ -779,8 +1129,11 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     </>
   );
   const pricing = calculatePricing(cost);
+  const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  if (page === "workbench") return <ModelWorkbench />;
   return (
     <>
+    <div inert={solidBusy} style={{ display: "contents" }}>
       <header className="app-header">
         <Link to="/" className="brand">
           <svg className="brand-mark" viewBox="0 0 36 40" fill="none" aria-hidden="true">
@@ -802,6 +1155,8 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               {n.label}
             </Link>
           ))}
+          <Link to="/color-studio" className="nav-link"><Palette /> Color Studio</Link>
+          <Link to="/expressinho" className="nav-link"><Sparkles /> Expressinho</Link>
         </nav>
         <div className="header-end">
           <span className="version">STUDIO v7.5</span>
@@ -847,6 +1202,17 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               </Button>
               <input
                 type="file"
+                accept=".glb,model/gltf-binary"
+                className="hidden"
+                ref={importGlbRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void importGlb(file);
+                  e.currentTarget.value = "";
+                }}
+              />
+              <input
+                type="file"
                 accept=".stl"
                 className="hidden"
                 ref={importStlRef}
@@ -878,8 +1244,60 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   e.currentTarget.value = "";
                 }}
               />
+              <input type="file" accept=".stl" className="hidden" ref={solidStlRef} onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.currentTarget.value = "";
+                if (file) void runSolidEdit({ kind: "union-file", file });
+              }} />
+              <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}} aria-label="Dimensões para novos modelos">
+                <label>Largura / diâmetro (mm) <input type="number" min="15" max="300" step="1" value={starterWidth} onChange={e=>setStarterWidth(Number(e.target.value))} style={{width:72}} /></label>
+                <label>Altura (mm) <input type="number" min="15" max="300" step="1" value={starterHeight} onChange={e=>setStarterHeight(Number(e.target.value))} style={{width:72}} /></label>
+                <label>Espessura (mm) <input type="number" min="0.8" max="30" step="0.5" value={starterThickness} onChange={e=>setStarterThickness(Number(e.target.value))} style={{width:72}} /></label>
+                <label>Furo (mm) <input type="number" min="0" max="50" step="0.5" value={starterHole} onChange={e=>setStarterHole(Number(e.target.value))} style={{width:72}} /></label>
+              </div>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("round-keychain")}>
+                Criar chaveiro redondo
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("rectangle-keychain")}>
+                Criar chaveiro retangular
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("hex-keychain")}>
+                Criar chaveiro hexagonal
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("round-tag")}>
+                Criar medalha redonda
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createLedPrototype("frame")}>
+                Criar canal LED (moldura oca)
+              </Button>
+              <Button variant="outline" disabled={busy || solidBusy} onClick={() => void createOrganizer()}>
+                <Grid3X3 size={15} /> Criar organizador 220 × 140 × 40 mm
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createLedPrototype("lid")}>
+                Criar tampa LED separada
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => createStarter("nameplate")}>
+                Criar placa 3D
+              </Button>
+              <input type="file" accept=".svg,image/svg+xml" ref={svgImportRef} className="hidden" onChange={e => {
+                const file = e.target.files?.[0]; e.currentTarget.value = "";
+                if (file) void importSvg(file);
+              }} />
+              <Button variant="outline" disabled={busy} onClick={() => svgImportRef.current?.click()}>
+                <Upload /> Criar logo 3D de SVG
+              </Button>
+              <input type="file" accept=".svg,image/svg+xml" ref={logoOverlayRef} className="hidden" onChange={e => {
+                const file = e.target.files?.[0]; e.currentTarget.value = "";
+                if (file) void applySvgLogo(file);
+              }} />
+              <Button variant="outline" disabled={!imported || busy} onClick={() => logoOverlayRef.current?.click()}>
+                <Layers /> Aplicar logo SVG sobre STL
+              </Button>
               <Button variant="outline" onClick={() => importStlRef.current?.click()}>
                 <Upload /> Abrir STL
+              </Button>
+              <Button variant="outline" disabled={busy} onClick={() => importGlbRef.current?.click()}>
+                <Upload /> Abrir GLB (Tripo/Blender)
               </Button>
               <Button
                 variant="outline"
@@ -1062,19 +1480,28 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   )}
                 </div>
                 {imported ? (
+                  <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                   <MeshEditPanel
                     name={imported.name}
                     geometry={imported.geometry}
                     onCommit={commitMesh}
+                    onSolidUnion={() => solidStlRef.current?.click()}
+                    onSolidCut={(axis, offset, keepPositive) => void runSolidEdit({ kind: "cut", axis, offset, keepPositive })}
                     onMerge={() => mergeStlRef.current?.click()}
                     onBooleanUnion={() => booleanStlRef.current?.click()}
                     onBlenderCut={(axis, offset, keepPositive) =>
                       void runBlenderEdit("cut", { axis, offset, keepPositive })
                     }
+                    onDiagnose={() => void runMeshWorkbenchInspect()}
+                    diagnostic={meshWorkbenchDiagnostic}
+                    diagnoseBusy={meshWorkbenchBusy}
                     notify={notify}
                   />
+                  </fieldset>
                 ) : (
                   <>
+                    <Nameplate3DPanel disabled={busy || solidBusy} onCreate={createNameplateModel} />
+                    <Text3DPanel disabled={busy || solidBusy} onCreate={createTextModel} />
                     <div className="property-section">
                       <div className="section-label">
                         <Type />
@@ -1330,16 +1757,21 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
             <div className="tool-form">
               {(
                 [
-                  { key: "weight", label: "Peso do modelo (g)", step: 1 },
-                  { key: "price", label: "Preço do filamento (R$/kg)", step: 1 },
-                  { key: "hours", label: "Tempo de impressão (horas)", step: 0.5 },
-                  { key: "power", label: "Potência da impressora (W)", step: 1 },
+                  { key: "weight", label: "Peso da peça (g)", step: 1 },
+                  { key: "price", label: "Preço do filamento (R$/kg)", step: 0.5 },
+                  { key: "hours", label: "Tempo de impressão por peça (h)", step: 0.1 },
+                  { key: "power", label: "Potência média da impressora (W)", step: 1 },
                   { key: "kwh", label: "Tarifa de energia (R$/kWh)", step: 0.01 },
-                  { key: "labor", label: "Mão de obra (R$)", step: 0.5 },
-                  { key: "supplies", label: "Embalagem e insumos (R$)", step: 0.5 },
-                  { key: "maintenance", label: "Reserva para manutenção (R$)", step: 0.5 },
-                  { key: "fee", label: "Taxas sobre a venda (%)", step: 0.5 },
-                  { key: "margin", label: "Margem de lucro desejada (%)", step: 1 },
+                  { key: "machineValue", label: "Valor da impressora (R$)", step: 50 },
+                  { key: "machineLifeHours", label: "Vida útil estimada da máquina (h)", step: 100 },
+                  { key: "laborRate", label: "Valor da hora de trabalho (R$/h)", step: 0.5 },
+                  { key: "manualHours", label: "Tempo manual por peça (h)", step: 0.05 },
+                  { key: "supplies", label: "Embalagem e insumos por peça (R$)", step: 0.5 },
+                  { key: "maintenance", label: "Reserva de manutenção por peça (R$)", step: 0.5 },
+                  { key: "quantity", label: "Quantidade no lote (un.)", step: 1 },
+                  { key: "failureRate", label: "Reserva para falhas (%)", step: 1 },
+                  { key: "fee", label: "Taxas da venda/marketplace (%)", step: 0.5 },
+                  { key: "margin", label: "Lucro sobre o custo real (%)", step: 5 },
                 ] as const
               ).map((f) => (
                 <label key={f.key}>
@@ -1347,59 +1779,57 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   <input
                     className="text-input"
                     type="number"
-                    min={0}
+                    min={f.key === "quantity" ? 1 : 0}
                     step={f.step}
                     value={cost[f.key]}
                     onChange={(e) =>
-                      setCost((c) => ({ ...c, [f.key]: Math.max(0, Number(e.target.value)) }))
+                      setCost((c) => ({
+                        ...c,
+                        [f.key]: Math.max(0, Number(e.target.value)),
+                      }))
                     }
                   />
                 </label>
               ))}
             </div>
             <div className="cost-result">
-              <span>CUSTO ESTIMADO</span>
-              <strong>
-                {pricing.cost.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-              </strong>
-              <p>
-                Material:{" "}
-                {pricing.material.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
-              </p>
-              <p>
-                Energia:{" "}
-                {pricing.energy.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
-              </p>
+              <span>PREÇO SUGERIDO POR PEÇA</span>
+              <strong>{pricing.salePrice === null ? "Confira os valores" : money(pricing.salePrice)}</strong>
+              <p>Total do lote: {pricing.salePriceTotal === null ? "—" : money(pricing.salePriceTotal)}</p>
               <hr className="my-6 border-border" />
+              <span>CUSTO UNITÁRIO</span>
+              <strong>{money(pricing.cost)}</strong>
+              <p>Lucro estimado por peça: {pricing.profit === null ? "—" : money(pricing.profit)}</p>
+              <p>Tempo total de impressão: {pricing.totalHours.toLocaleString("pt-BR")} h</p>
+              <p>Só filamento por peça: {money(pricing.material)}</p>
+              <hr className="my-6 border-border" />
+              <span>ANATOMIA DO CUSTO POR PEÇA</span>
+              <p>Filamento: {money(pricing.material)}</p>
+              <p>Energia: {money(pricing.energy)}</p>
+              <p>Desgaste da máquina: {money(pricing.machine)}</p>
+              <p>Mão de obra: {money(pricing.labor)}</p>
+              <p>Embalagem e insumos: {money(pricing.supplies)}</p>
+              <p>Manutenção: {money(pricing.maintenance)}</p>
+              <p>Reserva para falhas: {money(pricing.failureReserve)}</p>
+              <hr className="my-6 border-border" />
+              <p>Custo total do lote: {money(pricing.costTotal)}</p>
+              <p>Lucro estimado no lote: {pricing.profitTotal === null ? "—" : money(pricing.profitTotal)}</p>
               <p>
-                Mão de obra, insumos e manutenção:{" "}
-                {(cost.labor + cost.supplies + cost.maintenance).toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
-              </p>
-              <span>PREÇO SUGERIDO DE VENDA</span>
-              <strong>
-                {pricing.salePrice === null
-                  ? "Margem + taxas inválidas"
-                  : pricing.salePrice.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-              </strong>
-              <p>
-                A margem de lucro é calculada sobre o preço de venda, não sobre o custo. Taxas são
-                percentuais do preço de venda. Informe a tributação aplicável em taxas.
+                O lucro é calculado sobre o custo completo. As taxas da venda são descontadas do
+                preço para preservar o lucro informado.
               </p>
               {!pricing.valid && (
-                <p role="alert">A soma de taxas e margem deve ser menor que 100%.</p>
+                <p role="alert">
+                  Confira os valores: quantidade deve ser pelo menos 1, taxa menor que 100% e,
+                  se houver valor de máquina, informe uma vida útil maior que zero. A reserva para
+                  falhas deve ficar entre 0% e 100%.
+                </p>
               )}
+              <p>
+                <a href="https://calc3d.com.br/#calculadora" target="_blank" rel="noreferrer">
+                  Conferir no Calc3D ↗
+                </a>
+              </p>
             </div>
           </section>
         )}
@@ -1550,6 +1980,8 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
           {notice}
         </div>
       )}
+    </div>
+    {solidBusy && <div className="dialog-backdrop" role="status" style={{ zIndex: 9999 }}><div className="dialog-card">Processando sólido… prazo máximo de 60 segundos.</div></div>}
     </>
   );
 }

@@ -10,6 +10,7 @@ import {
   Users,
   Store,
   Stethoscope,
+  ClipboardCheck,
   Download,
   FileArchive,
   RotateCcw,
@@ -41,13 +42,16 @@ import MeshyImageTo3D from "./MeshyImageTo3D";
 
 const Preview3D = lazy(() => import("./ImagePreview3D"));
 const menu = [
-  { to: "/", label: "Imagem para 3D", icon: ImageUp },
+  { to: "/", label: "Criar objetos", icon: Sparkles },
+  { to: "/imagem-para-3d", label: "Imagem para 3D", icon: ImageUp },
   { to: "/studio", label: "Editor 3D", icon: Box },
+  { to: "/expressinho", label: "Criar objeto por imagem", icon: Sparkles },
   { to: "/formas", label: "Formas", icon: Shapes },
   { to: "/catalogo", label: "Catálogo", icon: Store },
   { to: "/projetos", label: "Projetos", icon: FolderOpen },
   { to: "/calculadora", label: "Calculadora", icon: Calculator },
   { to: "/mesh-doctor", label: "Mesh Doctor", icon: Stethoscope },
+  { to: "/qa-studio", label: "QA Studio · Testes", icon: ClipboardCheck },
   { to: "/comunidade", label: "Comunidade", icon: Users },
 ] as const;
 const cards: { mode: ImageMode; title: string; description: string }[] = [
@@ -501,6 +505,27 @@ export default function ImageTo3DApp() {
                 <Shapes size={15} /> Topologia limpa
               </button>
             </div>
+            <div className="im3-generator-options" aria-label="Ensaios rápidos de imagem para 3D">
+              <span>Testes rápidos</span>
+              <button onClick={() => {
+                setToolMode("image");
+                setSettings(s => ({ ...s, mode: "relevo", widthMm: 50, baseMm: 2, heightMm: 1, resolution: 96 }));
+                if (!source) setLoaded(exampleImage());
+                setMessage("Perfil de teste: relevo de 50 mm de largura. Verifique a malha e exporte STL/3MF; ainda não inclui furo de chaveiro.");
+              }}>Relevo 50 mm</button>
+              <button onClick={() => {
+                setToolMode("image");
+                setSettings(s => ({ ...s, mode: "silhueta", silhouetteBase: false, widthMm: 60, minMm: 3, maxMm: 3.2, resolution: 96 }));
+                if (!source) setLoaded(exampleImage());
+                setMessage("Perfil de teste: silhueta de 60 mm. Confira espessura, contorno e fechamento antes de exportar.");
+              }}>Silhueta 60 mm</button>
+              <button onClick={() => {
+                setToolMode("image");
+                setSettings(s => ({ ...s, mode: "litofania", widthMm: 80, baseMm: 1, minMm: 0.8, maxMm: 3, resolution: 96 }));
+                if (!source) setLoaded(exampleImage());
+                setMessage("Perfil de teste: litofania de 80 mm. Confira o relevo e o fatiamento antes de aprovar.");
+              }}>Litofania 80 mm</button>
+            </div>
             <div className="im3-generator-note">
               <span className="status-dot" /> Seus arquivos são processados localmente no navegador
             </div>
@@ -515,6 +540,10 @@ export default function ImageTo3DApp() {
             <div className="preview-chip chip-top">Imagem → malha</div>
             <div className="preview-chip chip-bottom">STL · 3MF</div>
           </div>
+        </section>
+        <section style={{margin:"24px auto",maxWidth:1180,padding:"16px 20px",border:"1px solid #927056",borderRadius:12,display:"flex",justifyContent:"space-between",gap:14,flexWrap:"wrap",alignItems:"center"}}>
+          <div><strong>Já criou um personagem no Tripo?</strong><p>Importe o GLB na nossa oficina e confira texturas, dimensões e exportação sem novos créditos.</p></div>
+          <Link to="/modelo-ia" className="nav-link">Abrir Oficina de Modelos IA →</Link>
         </section>
         <section className="im3-tripo" aria-labelledby="tripo-title">
           <div className="im3-tripo-copy">
