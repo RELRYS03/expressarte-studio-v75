@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { handleTeamAuth } from "./lib/server/team-auth";
+import { resolveRuntimeContext } from "./lib/server/runtime-context";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -48,12 +49,13 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const runtime = resolveRuntimeContext(request, env, ctx);
       if (import.meta.env.PROD) {
-        const authResponse = await handleTeamAuth(request, env);
+        const authResponse = await handleTeamAuth(request, runtime.env);
         if (authResponse) return authResponse;
       }
       const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
+      const response = await handler.fetch(request, runtime.env, runtime.ctx);
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
       console.error(error);
