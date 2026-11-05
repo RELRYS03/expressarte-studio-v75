@@ -72,7 +72,6 @@ export interface FileRoutesByFullPath {
   '/comunidade': typeof ComunidadeRoute
   '/formas': typeof FormasRoute
   '/inspecionar-glb': typeof InspecionarGlbRoute
-  '/inspecionar-glb': typeof InspecionarGlbRoute
   '/mesh-doctor': typeof MeshDoctorRoute
   '/projetos': typeof ProjetosRoute
   '/studio': typeof StudioRoute
