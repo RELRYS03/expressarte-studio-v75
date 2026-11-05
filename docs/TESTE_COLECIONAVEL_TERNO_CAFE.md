@@ -40,3 +40,5 @@ Os tubos de cabelo e sobrancelhas têm extremidades fechadas antes da união; a 
 ## Limites
 
 É uma aproximação de teste, não uma réplica fiel da referência. Cabelo, lapelas e mãos são simplificados; a xícara é um sólido com superfície de café e alça. Não houve teste no Bambu Studio nem impressão física. A geração deste exemplo por script não torna operacional a criação automática de qualquer personagem por imagem ou texto no site. Não houve publicação.
+
+O usuário apresentou depois um 3MF de referência com o acabamento desejado. Consulte [o padrão de qualidade e a comparação](REFERENCIA_QUALIDADE_3MF.md); o teste acima não deve ser tratado como resultado final aprovado.
