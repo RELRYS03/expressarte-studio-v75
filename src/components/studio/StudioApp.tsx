@@ -60,6 +60,7 @@ import {
   resizeGeometry,
   type MeshAxis,
 } from "@/lib/studio/mesh-editing";
+import { analyzeMeshHealth, type MeshHealth } from "@/lib/studio/mesh-health";
 import CatalogPage from "./CatalogPage";
 import CommunityPage from "./CommunityPage";
 const ModelScene = lazy(() => import("./ModelScene"));
@@ -469,7 +470,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
     triangles: number;
     size: number;
     dimensions: string;
-    closed: boolean;
+    health: MeshHealth;
   } | null>(null);
   const [cost, setCost] = useState(defaultPricing);
   const [imported, setImported] = useState<{ name: string; geometry: BufferGeometry } | null>(null);
@@ -693,30 +694,20 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       return;
     }
     try {
-      const { STLLoader } = await import("three/examples/jsm/loaders/STLLoader.js");
+      const { STLLoader } =
+        await import("three/examples/jsm/loaders/STLLoader.js");
       const geometry = new STLLoader().parse(await file.arrayBuffer());
       geometry.computeBoundingBox();
       const position = geometry.getAttribute("position"),
         box = geometry.boundingBox;
       if (!box || position.count === 0) throw new Error("empty");
-      const edges = new Map<string, number>();
-      for (let i = 0; i < position.count; i += 3) {
-        const vertices = [0, 1, 2].map((j) =>
-          [position.getX(i + j), position.getY(i + j), position.getZ(i + j)]
-            .map((n) => n.toFixed(4))
-            .join(","),
-        );
-        for (let j = 0; j < 3; j++) {
-          const key = [vertices[j], vertices[(j + 1) % 3]].sort().join("|");
-          edges.set(key, (edges.get(key) ?? 0) + 1);
-        }
-      }
+      const health = analyzeMeshHealth(geometry);
       setMesh({
         name: file.name,
         triangles: position.count / 3,
         size: file.size,
         dimensions: `${(box.max.x - box.min.x).toFixed(1)} × ${(box.max.y - box.min.y).toFixed(1)} × ${(box.max.z - box.min.z).toFixed(1)} mm`,
-        closed: [...edges.values()].every((n) => n === 2),
+        health,
       });
       geometry.dispose();
     } catch {
@@ -1428,24 +1419,46 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               <>
                 <div className="project-row">
                   <h3>{mesh.name}</h3>
-                  <span className="text-muted-foreground">{(mesh.size / 1024).toFixed(1)} KB</span>
+                  <span className="text-muted-foreground">
+                    {(mesh.size / 1024).toFixed(1)} KB
+                  </span>
                 </div>
                 <div className="mesh-stats">
                   <div>
-                    Triângulos<strong>{mesh.triangles.toLocaleString("pt-BR")}</strong>
+                    Triângulos
+                    <strong>{mesh.triangles.toLocaleString("pt-BR")}</strong>
                   </div>
                   <div>
-                    Dimensões<strong className="text-base">{mesh.dimensions}</strong>
+                    Dimensões
+                    <strong className="text-base">{mesh.dimensions}</strong>
                   </div>
                   <div>
                     Conectividade das arestas
                     <strong className="text-base">
-                      {mesh.closed ? "Malha fechada" : "Arestas abertas ou sobrepostas"}
+                      {mesh.health.closed
+                        ? "Arestas fechadas e orientadas"
+                        : "Problemas detectados"}
                     </strong>
+                  </div>
+                  <div>
+                    Bordas abertas<strong>{mesh.health.openEdges}</strong>
+                  </div>
+                  <div>
+                    Arestas com mais de duas faces
+                    <strong>{mesh.health.nonManifoldEdges}</strong>
+                  </div>
+                  <div>
+                    Arestas com orientação inconsistente
+                    <strong>{mesh.health.inconsistentEdges}</strong>
+                  </div>
+                  <div>
+                    Triângulos degenerados
+                    <strong>{mesh.health.degenerateTriangles}</strong>
                   </div>
                 </div>
                 <p className="text-muted-foreground mt-5">
-                  Inspeção geométrica básica; não verifica interseções ou orientação das faces.
+                  A análise usa coordenadas exatas e não verifica
+                  autointerseções, espessura ou orientação global do volume.
                   Revise no fatiador antes de imprimir.
                 </p>
               </>
