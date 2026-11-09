@@ -17,6 +17,7 @@ AUDITOR = ROOT / "scripts" / "expressinho_audit.py"
 PREPARER = ROOT / "scripts" / "expressinho_prepare.py"
 from expressinho_prepare_specs import validate_spec
 from expressinho_triposr_specs import decode_image, local_config
+from expressarte_engine_registry import build_engine_status, engine_catalog
 BLENDER = Path(os.environ.get(
     "EXPRESSARTE_BLENDER_EXE",
     r"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
@@ -72,6 +73,13 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self._origin_ok():
             self._json(403, {"error": "Acesso permitido somente ao Studio local."})
+            return
+        if self.path == "/v1/engine/status":
+            self._json(200, build_engine_status(BLENDER))
+            return
+        if self.path == "/v1/engines":
+            status = build_engine_status(BLENDER)
+            self._json(200, {"engines": engine_catalog(status)})
             return
         if self.path == "/v1/triposr/status":
             info = local_config()
