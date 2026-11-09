@@ -17,6 +17,7 @@ import { Route as FormasRouteImport } from './routes/formas'
 import { Route as MeshDoctorRouteImport } from './routes/mesh-doctor'
 import { Route as ProjetosRouteImport } from './routes/projetos'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as CanvasRouteImport } from './routes/canvas'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +59,11 @@ const StudioRoute = StudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CanvasRoute = CanvasRouteImport.update({
+  id: '/canvas',
+  path: '/canvas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/mesh-doctor': typeof MeshDoctorRoute
   '/projetos': typeof ProjetosRoute
   '/studio': typeof StudioRoute
+  '/canvas': typeof CanvasRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/mesh-doctor': typeof MeshDoctorRoute
   '/projetos': typeof ProjetosRoute
   '/studio': typeof StudioRoute
+  '/canvas': typeof CanvasRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/mesh-doctor': typeof MeshDoctorRoute
   '/projetos': typeof ProjetosRoute
   '/studio': typeof StudioRoute
+  '/canvas': typeof CanvasRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/mesh-doctor'
     | '/projetos'
     | '/studio'
+    | '/canvas'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -132,6 +142,7 @@ export interface RootRouteChildren {
   MeshDoctorRoute: typeof MeshDoctorRoute
   ProjetosRoute: typeof ProjetosRoute
   StudioRoute: typeof StudioRoute
+  CanvasRoute: typeof CanvasRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,6 +203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/canvas': {
+      id: '/canvas'
+      path: '/canvas'
+      fullPath: '/canvas'
+      preLoaderRoute: typeof CanvasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -204,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   MeshDoctorRoute: MeshDoctorRoute,
   ProjetosRoute: ProjetosRoute,
   StudioRoute: StudioRoute,
+  CanvasRoute: CanvasRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
