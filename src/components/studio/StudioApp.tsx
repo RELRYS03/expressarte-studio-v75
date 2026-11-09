@@ -37,6 +37,7 @@ import {
   Scaling,
   Combine,
   Undo2,
+  Workflow,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,12 +63,14 @@ import {
 } from "@/lib/studio/mesh-editing";
 import CatalogPage from "./CatalogPage";
 import CommunityPage from "./CommunityPage";
+import ExpressArteCanvas from "./ExpressArteCanvas";
 const ModelScene = lazy(() => import("./ModelScene"));
 export type StudioPage =
-  "imagem" | "studio" | "formas" | "projetos" | "calculadora" | "mesh" | "comunidade" | "catalogo";
+  "imagem" | "studio" | "formas" | "projetos" | "calculadora" | "mesh" | "comunidade" | "catalogo" | "canvas";
 const nav = [
   { to: "/", label: "Imagem para 3D", icon: ImageUp, page: "imagem" },
   { to: "/studio", label: "Studio 3D", icon: Box, page: "studio" },
+  { to: "/canvas", label: "Canvas", icon: Workflow, page: "canvas" },
   { to: "/formas", label: "Formas", icon: Shapes, page: "formas" },
   { to: "/catalogo", label: "Catálogo", icon: Store, page: "catalogo" },
   { to: "/projetos", label: "Meus projetos", icon: FolderOpen, page: "projetos" },
@@ -87,6 +90,7 @@ const titles: Record<StudioPage, [string, string]> = {
   calculadora: ["Calculadora de impressão", "Materiais, energia e tempo de produção."],
   mesh: ["Mesh Doctor", "Inspeção de arquivos STL para impressão 3D."],
   comunidade: ["Comunidade", "Seu mural local de ideias, projetos e publicações."],
+  canvas: ["Express’Arte Canvas", "Organize ferramentas e etapas em fluxos visuais reutilizáveis."],
 };
 function RangeField({
   label,
@@ -1452,6 +1456,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
             )}
           </section>
         )}
+        {page === "canvas" && <ExpressArteCanvas />}
         {page === "comunidade" && <CommunityPage />}
       </main>
       <footer className="app-footer">
