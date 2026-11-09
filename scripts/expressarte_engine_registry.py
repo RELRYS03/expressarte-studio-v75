@@ -139,6 +139,13 @@ def build_engine_status(blender_executable=None, ai_python=None):
             "reason": "Gera mesh UV-texturizada; exige GPU de aproximadamente 7 GB e licença Community condicional.",
         },
         {
+            "id": "instantmesh-image-to-3d",
+            "name": "InstantMesh",
+            "status": "remote-only",
+            "execution": "remote-worker",
+            "reason": "Apache-2.0 no código/model card; exporta mapa UV, mas o upstream usa PyTorch/CUDA/xformers.",
+        },
+        {
             "id": "triposr-image-to-3d",
             "name": "TripoSR",
             "status": "remote-recommended" if image3d_mode == "remote-recommended" else "local-candidate",
