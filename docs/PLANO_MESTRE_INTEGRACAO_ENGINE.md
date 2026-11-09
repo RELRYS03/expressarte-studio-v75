@@ -38,7 +38,7 @@
 | 17 | Slicing, orientação e suportes | OrcaSlicer / PrusaSlicer | Fatiamento em camadas, perímetros, infill, suportes tree e geração de G-code | Ambos AGPL-3.0; não copiar nem linkar código. Chamar executável externo e cumprir avisos/obrigações se redistribuir | CLI do slicer instalado separadamente; integração por subprocess e leitura de saída | F2: gerar 3MF/G-code sem erro no perfil Bambu A1 |
 | 18 | Validação de imprimibilidade | trimesh / Blender 3D Print Toolbox | Medir manifold, volume, normais, espessura estimada e overhang | trimesh MIT; Toolbox GPL-3.0-or-later | Python local + painel; Blender CLI para inspeções adicionais | F2: relatório com coordenadas e correções sugeridas |
 | 19 | Exportação multiformato | Blender exporters / Assimp | Converter malha, UV, materiais, transformações e eixos entre GLB/OBJ/FBX/STL | Blender GPL via executável externo; Assimp BSD-3-Clause | Menu Studio chama API local, que invoca Blender CLI; 3MF pelo slicer | F1: arquivos reabrem em Blender, navegador e slicer |
-| 20 | Fila, VRAM, cache e logs | Gerenciador próprio / Celery | Fila persistente, limite de concorrência, cache por hash, unload de modelos, retry e logs estruturados | Próprio; Celery BSD-3-Clause; sem pesos | Python 3.11 + SQLite + subprocess; sem Redis no MVP | F1: 2 jobs sequenciais, sem vazamento e com status rastreável |
+| 20 | Fila, VRAM, cache e logs | Gerenciador SQLite próprio / Huey | Fila persistente, limite de concorrência, cache por hash, unload de modelos, retry e logs estruturados | Próprio; Huey MIT; sem pesos | Python 3.11 + SQLite + subprocess; sem Redis no MVP | F1: 2 jobs sequenciais, sem vazamento e com status rastreável |
 
 ## Fases de execução
 
