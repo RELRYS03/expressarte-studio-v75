@@ -78,6 +78,8 @@ O script scripts/expressarte_setup_windows.ps1:
 
 O repositório já possui scripts/blender_bridge.py, servidor HTTP restrito a 127.0.0.1:8766, com operações de malha, chaveiro e rota TripoSR opcional. Esta branch acrescenta somente rotas de leitura /v1/engine/status e /v1/engines; não executa geração nem baixa pesos.
 
+O script scripts/expressarte_smoke_bridge.ps1 consulta o status DirectML e chama /v1/create-keychain para produzir STL e BLEND reais via Blender. Ele valida a ponte geométrica local; não afirma que um modelo neural já esteja instalado.
+
 ## Licenciamento — bloqueios comerciais
 
 - Nunca inferir licença de pesos a partir da licença do código.
