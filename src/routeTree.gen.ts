@@ -121,6 +121,7 @@ export interface FileRouteTypes {
     | '/mesh-doctor'
     | '/projetos'
     | '/studio'
+    | '/canvas'
   id:
     | '__root__'
     | '/'
@@ -131,6 +132,7 @@ export interface FileRouteTypes {
     | '/mesh-doctor'
     | '/projetos'
     | '/studio'
+    | '/canvas'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
