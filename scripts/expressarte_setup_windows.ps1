@@ -79,7 +79,21 @@ if ($StartBridge) {
     $listener = Get-NetTCPConnection -LocalPort 8766 -State Listen -ErrorAction SilentlyContinue
     if (-not $listener) {
         Start-Process -FilePath "py.exe" -ArgumentList @("-3.11", "scripts\blender_bridge.py") -WorkingDirectory $repoRoot
-        Write-Host "Ponte Blender iniciada em http://127.0.0.1:8766"
+        Write-Host "Aguardando a ponte Blender responder..."
+        $bridgeReady = $false
+        for ($attempt = 0; $attempt -lt 15; $attempt++) {
+            try {
+                $null = Invoke-RestMethod -Uri "http://127.0.0.1:8766/v1/health" -Method Get -TimeoutSec 2
+                $bridgeReady = $true
+                break
+            } catch {
+                Start-Sleep -Seconds 1
+            }
+        }
+        if (-not $bridgeReady) {
+            throw "A ponte não respondeu na porta 8766. Confira o terminal do Blender Bridge."
+        }
+        Write-Host "Ponte Blender pronta em http://127.0.0.1:8766"
     } else {
         Write-Host "Ponte já está escutando na porta 8766."
     }
