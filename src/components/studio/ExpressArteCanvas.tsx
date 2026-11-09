@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import {
   ArrowDownToLine,
   Boxes,
@@ -7,7 +7,6 @@ import {
   Copy,
   ImagePlus,
   Layers3,
-  Link2,
   Move,
   Plus,
   RotateCcw,
@@ -168,7 +167,7 @@ export default function ExpressArteCanvas() {
     setNotice("Bloco removido.");
   };
 
-  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     const bounds = canvasRef.current?.getBoundingClientRect();
     if (!drag || !bounds) return;
