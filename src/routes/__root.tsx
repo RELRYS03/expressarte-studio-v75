@@ -82,16 +82,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "ExpressArte Studio — Criação 3D" },
       {
         name: "description",
-        content: "Crie formas e medalhas personalizadas no ExpressArte Studio.",
+        content: "Crie chaveiros, relevos, litofanias e modelos 3D personalizados a partir de imagens. Prepare e exporte arquivos STL para impressão 3D no Express’Arte Studio.",
       },
       { name: "author", content: "ExpressArte" },
       { property: "og:title", content: "ExpressArte Studio — Criação 3D" },
       {
         property: "og:description",
-        content: "Crie formas e medalhas personalizadas no ExpressArte Studio.",
+        content: "Crie chaveiros, relevos, litofanias e modelos 3D personalizados a partir de imagens. Prepare e exporte arquivos STL para impressão 3D no Express’Arte Studio.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "Express’Arte Studio 3D | Imagem para STL" },
+      { name: "twitter:description", content: "Converta imagens em relevos, chaveiros e modelos para impressão 3D." },
+      { property: "og:locale", content: "pt_BR" },
     ],
     links: [
       {
