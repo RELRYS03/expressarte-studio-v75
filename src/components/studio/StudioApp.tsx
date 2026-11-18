@@ -1336,6 +1336,18 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   <span className="count">{shapes.length} formas</span>
                 </div>
                 {library}
+                <section className="studio-mesh-section" aria-label="02 Malha">
+                  <div className="studio-numbered-heading"><span>02</span> MALHA</div>
+                  <p>Visualize a triangulação ou carregue uma malha existente para edição.</p>
+                  <div className="studio-mesh-actions">
+                    <Button size="sm" variant={wireframe ? "default" : "outline"} onClick={() => setWireframe(v => !v)}>
+                      <Layers size={14} /> {wireframe ? "Sólido" : "Ver triângulos"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => importStlRef.current?.click()}>
+                      <Upload size={14} /> Importar STL
+                    </Button>
+                  </div>
+                </section>
                 <div className="library-footer">
                   <Layers size={12} />
                   Feitas para dar vida às suas ideias
@@ -1356,21 +1368,13 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                 </ClientOnly>
                 <div className="viewport-top">
                   <div className="view-tabs">
-                    <Button
-                      variant="ghost"
-                      className={view === "3d" ? "selected" : ""}
-                      onClick={() => setView("3d")}
-                    >
-                      <Box size={12} />
-                      3D
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={view === "2d" ? "selected" : ""}
-                      onClick={() => setView("2d")}
-                    >
-                      Vista superior
-                    </Button>
+                    {([
+                      ["3d", "3D"], ["front", "Frente"], ["top", "Topo"], ["side", "Lado"],
+                    ] as const).map(([key, label]) => (
+                      <Button key={key} variant="ghost" className={view === key ? "selected" : ""} onClick={() => setView(key)}>
+                        {label}
+                      </Button>
+                    ))}
                   </div>
                   <div className="viewport-tools">
                     <Button
