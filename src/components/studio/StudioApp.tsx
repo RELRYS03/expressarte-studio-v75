@@ -1336,6 +1336,16 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   <span className="count">{shapes.length} formas</span>
                 </div>
                 {library}
+                <section className="studio-size-section" aria-label="Tamanho da peça">
+                  <div className="studio-numbered-heading"><span>01</span> TAMANHO</div>
+                  <div className="studio-size-chips">
+                    {[60, 80, 100].map((size) => (
+                      <Button key={size} size="sm" variant={config.diameter === size ? "default" : "outline"} onClick={() => update("diameter", size)}>
+                        {size === 60 ? "Mini" : size === 80 ? "Médio" : "Grande"} · {size} mm
+                      </Button>
+                    ))}
+                  </div>
+                </section>
                 <section className="studio-mesh-section" aria-label="02 Malha">
                   <div className="studio-numbered-heading"><span>02</span> MALHA</div>
                   <p>Visualize a triangulação ou carregue uma malha existente para edição.</p>
