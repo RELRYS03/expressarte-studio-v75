@@ -85,7 +85,7 @@ function makeHemisphere(radius: number, wall: number, segments: number, name: st
 
   profile.push(new Vector2(radius, 0));
 
-  for (let i = segments / 2; i >= 0; i--) {
+  for (let i = segments / 2 - 1; i >= 0; i--) {
     const angle = (i / (segments / 2)) * (Math.PI / 2);
     profile.push(new Vector2(
       radius * Math.sin(angle),
