@@ -3642,3 +3642,9 @@ textarea:focus-visible {
   .studio-bottom-actions { flex-direction: column; }
   .studio-bottom-actions button { width: 100%; }
 }
+
+
+.studio-size-section { padding: 0 13px 14px; border-top: 1px solid var(--border); }
+.studio-size-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 1px; }
+.studio-size-chips button { height: 29px; padding: 0 8px; font-size: 10px; }
+.studio-size-chips button[data-variant="default"] { border-color: var(--primary); }
