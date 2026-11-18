@@ -6,7 +6,7 @@ import { placeRaisedLogo } from "@/lib/studio/logo-placement";
 import { createLedChannelPart } from "@/lib/studio/led-channel";
 import { createOrganizerGeometry } from "@/lib/studio/organizer";
 import type { SolidOperation } from "@/lib/studio/solid-mesh";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
 import { Link, ClientOnly } from "@tanstack/react-router";
 import {
@@ -1128,6 +1128,19 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       </div>
     </>
   );
+  const triangleCount = useMemo(() => {
+    if (imported) return Math.floor((imported.geometry.getAttribute("position")?.count ?? 0) / 3);
+    const model = buildModel(config);
+    let total = 0;
+    model.traverse((node) => {
+      if ("isMesh" in node && node.isMesh) {
+        const mesh = node as import("three").Mesh;
+        total += Math.floor((mesh.geometry.getAttribute("position")?.count ?? 0) / 3);
+      }
+    });
+    disposeModel(model);
+    return total;
+  }, [config, imported]);
   const pricing = calculatePricing(cost);
   const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   if (page === "workbench") return <ModelWorkbench />;
@@ -1319,7 +1332,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
             <div className={`workspace editor-expanded ${imported ? "mesh-workspace" : ""}`} ref={workspaceRef}>
               <aside className="library-panel">
                 <div className="panel-heading">
-                  <span>Biblioteca de formas</span>
+                  <span>01&nbsp; FORMA</span>
                   <span className="count">{shapes.length} formas</span>
                 </div>
                 {library}
@@ -1463,7 +1476,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               </section>
               <aside className="properties-panel">
                 <div className="panel-heading">
-                  <span>{imported ? "Editar malha STL" : "Personalizar modelo"}</span>
+                  <span>{imported ? "02  MALHA · EDITAR STL" : "03  DESENHO E PERSONALIZAÇÃO"}</span>
                   {imported ? (
                     <Button
                       size="icon"
@@ -1505,7 +1518,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                     <div className="property-section">
                       <div className="section-label">
                         <Type />
-                        Texto em relevo
+                        03 · DESENHO
                       </div>
                       <label className="field-label" htmlFor="model-text">
                         Texto da medalha
@@ -1525,7 +1538,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                     <div className="property-section">
                       <div className="section-label">
                         <Settings2 />
-                        Dimensões
+                        01 · FORMA — DIMENSÕES
                       </div>
                       <RangeField
                         label="Diâmetro"
@@ -1560,7 +1573,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                     <div className="property-section">
                       <div className="section-label">
                         <Palette />
-                        Material e cor
+                        04 · CORES
                       </div>
                       <div className="swatches">
                         {materials.map((m) => (
@@ -1581,7 +1594,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                     <div className="property-section">
                       <div className="section-label">
                         <Layers />
-                        Acabamento
+                        05 · PRENSA E UNIÃO
                       </div>
                       <Toggle
                         label="Argola de fixação"
@@ -1603,6 +1616,22 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   </>
                 )}
               </aside>
+            </div>
+            <div className="studio-bottom-bar">
+              <div className="studio-bottom-piece">
+                <span className="studio-bottom-eyebrow">PEÇA ATUAL</span>
+                <strong>{imported?.name ?? config.name ?? "Peça sem nome"}</strong>
+              </div>
+              <div className="studio-bottom-triangles">
+                <strong>{triangleCount.toLocaleString("pt-BR")}</strong>
+                <span>triângulos</span>
+              </div>
+              <div className="studio-bottom-actions">
+                <Button variant="outline" onClick={() => window.location.assign("/calculadora")}>Estimativa</Button>
+                <Button className="primary-action" disabled={busy} onClick={() => setDialog("export")}>
+                  <Download size={15} /> Download STL / GLB
+                </Button>
+              </div>
             </div>
             <div className="quick-strip">
               <div className="quick-item">
