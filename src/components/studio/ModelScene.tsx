@@ -158,8 +158,17 @@ export default function ModelScene({
         height = size.z / 2;
       }
     }
-    if (view === "2d") camera.position.set(0, height + distance, 1);
-    else camera.position.set(distance * 0.45, height + distance * 0.56, distance * 0.7);
+    camera.up.set(0, 1, 0);
+    if (view === "top" || view === "2d") {
+      camera.up.set(0, 0, -1);
+      camera.position.set(0, height + distance, 0.01);
+    } else if (view === "front") {
+      camera.position.set(0, height, distance);
+    } else if (view === "side") {
+      camera.position.set(distance, height, 0);
+    } else {
+      camera.position.set(distance * 0.45, height + distance * 0.56, distance * 0.7);
+    }
     camera.zoom = zoom / 100;
     camera.updateProjectionMatrix();
     controls.target.set(0, height, 0);

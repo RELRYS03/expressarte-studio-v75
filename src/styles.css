@@ -3503,3 +3503,148 @@ textarea:focus-visible {
 .expressinho-local-note{display:block;background:var(--card)}
 .expressinho-local-note p{margin:5px 0 0;color:var(--muted-foreground)}
 @media(max-width:700px){.expressinho-hub-heading{align-items:stretch;flex-direction:column}.expressinho-hub-heading>button{width:100%}}
+
+
+/* Studio 3D — layout de configurador inspirado em ferramentas de fabricação */
+.workspace.editor-expanded {
+  grid-template-columns: minmax(290px, 340px) minmax(0, 1fr);
+  grid-template-rows: minmax(250px, .88fr) minmax(300px, 1.12fr);
+  height: calc(100vh - 248px);
+  min-height: 680px;
+  max-height: 1100px;
+  border-radius: 10px;
+}
+.workspace.editor-expanded > .library-panel {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.workspace.editor-expanded > .properties-panel {
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 0;
+  overflow: auto;
+  border-left: 0;
+  border-right: 1px solid var(--border);
+}
+.workspace.editor-expanded > .viewport {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-height: 0;
+}
+.workspace.editor-expanded .panel-heading {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--card);
+}
+.studio-numbered-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 14px 8px;
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.studio-numbered-heading span {
+  color: var(--primary);
+  font-family: ui-monospace, monospace;
+}
+.studio-mesh-section {
+  padding: 0 13px 14px;
+  border-top: 1px solid var(--border);
+}
+.studio-mesh-section p {
+  margin: 0 0 10px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.studio-mesh-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.studio-mesh-actions button {
+  min-width: 0;
+  font-size: 10px;
+}
+.studio-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 30px;
+  min-height: 66px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  background: var(--card);
+}
+.studio-bottom-piece, .studio-bottom-triangles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.studio-bottom-piece strong {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.studio-bottom-eyebrow, .studio-bottom-triangles span {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+.studio-bottom-triangles strong {
+  font: 600 13px ui-monospace, monospace;
+}
+.studio-bottom-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.studio-bottom-actions button { height: 36px; font-size: 11px; }
+.workspace.editor-expanded .view-tabs { flex-wrap: wrap; }
+.workspace.editor-expanded .view-tabs button { min-width: 52px; }
+@media (max-width: 800px) {
+  .workspace.editor-expanded {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 440px auto;
+    height: auto;
+    min-height: 0;
+  }
+  .workspace.editor-expanded > .library-panel,
+  .workspace.editor-expanded > .properties-panel,
+  .workspace.editor-expanded > .viewport {
+    grid-column: 1;
+    grid-row: auto;
+    border-right: 0;
+  }
+  .workspace.editor-expanded > .library-panel { max-height: 430px; }
+  .workspace.editor-expanded > .properties-panel { max-height: 620px; }
+  .studio-bottom-bar { margin: 0 16px; flex-wrap: wrap; }
+  .studio-bottom-actions { width: 100%; }
+  .studio-bottom-actions button { flex: 1; }
+}
+@media (max-width: 500px) {
+  .studio-bottom-bar { padding: 10px; gap: 10px; }
+  .studio-bottom-piece strong { max-width: 160px; }
+  .studio-bottom-actions { flex-direction: column; }
+  .studio-bottom-actions button { width: 100%; }
+}
+
+
+.studio-size-section { padding: 0 13px 14px; border-top: 1px solid var(--border); }
+.studio-size-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 1px; }
+.studio-size-chips button { height: 29px; padding: 0 8px; font-size: 10px; }
+.studio-size-chips button[data-variant="default"] { border-color: var(--primary); }

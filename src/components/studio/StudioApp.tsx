@@ -6,7 +6,7 @@ import { placeRaisedLogo } from "@/lib/studio/logo-placement";
 import { createLedChannelPart } from "@/lib/studio/led-channel";
 import { createOrganizerGeometry } from "@/lib/studio/organizer";
 import type { SolidOperation } from "@/lib/studio/solid-mesh";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BufferGeometry } from "three";
 import { Link, ClientOnly } from "@tanstack/react-router";
 import {
@@ -1128,6 +1128,19 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
       </div>
     </>
   );
+  const triangleCount = useMemo(() => {
+    if (imported) return Math.floor((imported.geometry.getAttribute("position")?.count ?? 0) / 3);
+    const model = buildModel(config);
+    let total = 0;
+    model.traverse((node) => {
+      if ("isMesh" in node && node.isMesh) {
+        const mesh = node as import("three").Mesh;
+        total += Math.floor((mesh.geometry.getAttribute("position")?.count ?? 0) / 3);
+      }
+    });
+    disposeModel(model);
+    return total;
+  }, [config, imported]);
   const pricing = calculatePricing(cost);
   const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   if (page === "workbench") return <ModelWorkbench />;
@@ -1319,10 +1332,32 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
             <div className={`workspace editor-expanded ${imported ? "mesh-workspace" : ""}`} ref={workspaceRef}>
               <aside className="library-panel">
                 <div className="panel-heading">
-                  <span>Biblioteca de formas</span>
+                  <span>01&nbsp; FORMA</span>
                   <span className="count">{shapes.length} formas</span>
                 </div>
                 {library}
+                <section className="studio-size-section" aria-label="Tamanho da peça">
+                  <div className="studio-numbered-heading"><span>01</span> TAMANHO</div>
+                  <div className="studio-size-chips">
+                    {[60, 80, 100].map((size) => (
+                      <Button key={size} size="sm" variant={config.diameter === size ? "default" : "outline"} onClick={() => update("diameter", size)}>
+                        {size === 60 ? "Mini" : size === 80 ? "Médio" : "Grande"} · {size} mm
+                      </Button>
+                    ))}
+                  </div>
+                </section>
+                <section className="studio-mesh-section" aria-label="02 Malha">
+                  <div className="studio-numbered-heading"><span>02</span> MALHA</div>
+                  <p>Visualize a triangulação ou carregue uma malha existente para edição.</p>
+                  <div className="studio-mesh-actions">
+                    <Button size="sm" variant={wireframe ? "default" : "outline"} onClick={() => setWireframe(v => !v)}>
+                      <Layers size={14} /> {wireframe ? "Sólido" : "Ver triângulos"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => importStlRef.current?.click()}>
+                      <Upload size={14} /> Importar STL
+                    </Button>
+                  </div>
+                </section>
                 <div className="library-footer">
                   <Layers size={12} />
                   Feitas para dar vida às suas ideias
@@ -1343,21 +1378,13 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                 </ClientOnly>
                 <div className="viewport-top">
                   <div className="view-tabs">
-                    <Button
-                      variant="ghost"
-                      className={view === "3d" ? "selected" : ""}
-                      onClick={() => setView("3d")}
-                    >
-                      <Box size={12} />
-                      3D
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={view === "2d" ? "selected" : ""}
-                      onClick={() => setView("2d")}
-                    >
-                      Vista superior
-                    </Button>
+                    {([
+                      ["3d", "3D"], ["front", "Frente"], ["top", "Topo"], ["side", "Lado"],
+                    ] as const).map(([key, label]) => (
+                      <Button key={key} variant="ghost" className={view === key ? "selected" : ""} onClick={() => setView(key)}>
+                        {label}
+                      </Button>
+                    ))}
                   </div>
                   <div className="viewport-tools">
                     <Button
@@ -1463,7 +1490,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
               </section>
               <aside className="properties-panel">
                 <div className="panel-heading">
-                  <span>{imported ? "Editar malha STL" : "Personalizar modelo"}</span>
+                  <span>{imported ? "02  MALHA · EDITAR STL" : "03  DESENHO E PERSONALIZAÇÃO"}</span>
                   {imported ? (
                     <Button
                       size="icon"
@@ -1505,7 +1532,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                     <div className="property-section">
                       <div className="section-label">
                         <Type />
-                        Texto em relevo
+                        03 · DESENHO
                       </div>
                       <label className="field-label" htmlFor="model-text">
                         Texto da medalha
@@ -1525,7 +1552,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                     <div className="property-section">
                       <div className="section-label">
                         <Settings2 />
-                        Dimensões
+                        01 · FORMA — DIMENSÕES
                       </div>
                       <RangeField
                         label="Diâmetro"
@@ -1560,7 +1587,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                     <div className="property-section">
                       <div className="section-label">
                         <Palette />
-                        Material e cor
+                        04 · CORES
                       </div>
                       <div className="swatches">
                         {materials.map((m) => (
@@ -1581,7 +1608,7 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                     <div className="property-section">
                       <div className="section-label">
                         <Layers />
-                        Acabamento
+                        05 · PRENSA E UNIÃO
                       </div>
                       <Toggle
                         label="Argola de fixação"
@@ -1603,6 +1630,22 @@ export default function StudioApp({ page = "studio" }: { page?: StudioPage }) {
                   </>
                 )}
               </aside>
+            </div>
+            <div className="studio-bottom-bar">
+              <div className="studio-bottom-piece">
+                <span className="studio-bottom-eyebrow">PEÇA ATUAL</span>
+                <strong>{imported?.name ?? config.name ?? "Peça sem nome"}</strong>
+              </div>
+              <div className="studio-bottom-triangles">
+                <strong>{triangleCount.toLocaleString("pt-BR")}</strong>
+                <span>triângulos</span>
+              </div>
+              <div className="studio-bottom-actions">
+                <Button variant="outline" onClick={() => window.location.assign("/calculadora")}>Estimativa</Button>
+                <Button className="primary-action" disabled={busy} onClick={() => setDialog("export")}>
+                  <Download size={15} /> Download STL / GLB
+                </Button>
+              </div>
             </div>
             <div className="quick-strip">
               <div className="quick-item">
