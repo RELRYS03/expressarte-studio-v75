@@ -1,0 +1,39 @@
+name: Compilar APK ExpressArte AI Monitor
+on:
+  pull_request:
+    paths:
+      - 'android-monitor/**'
+      - '.github/workflows/build-expressarte-ai-monitor-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Instalar Android SDK 35
+        run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Preparar projeto Android
+        run: |
+          mkdir -p /tmp/ea-android android-monitor/source
+          base64 --decode android-monitor/project.zip.b64 > /tmp/ea-android/source.zip
+          unzip -q /tmp/ea-android/source.zip -d /tmp/ea-android
+          cp -a /tmp/ea-android/ExpressArte_A1_Android/. android-monitor/source/
+      - name: Compilar APK debug
+        run: gradle --no-daemon --project-dir android-monitor/source :app:assembleDebug
+      - name: Arquivar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ExpressArte-AI-Monitor-v02-APK
+          path: android-monitor/source/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
